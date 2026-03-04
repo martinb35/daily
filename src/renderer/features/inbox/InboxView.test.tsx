@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { InboxView } from './InboxView';
 
 vi.mock('../../hooks/useIpc', () => ({
@@ -14,13 +14,16 @@ describe('InboxView', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the inbox heading', async () => {
+  it('renders the quick add input', async () => {
     render(<InboxView />);
-    expect(await screen.findByText(/inbox/i)).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText(/add a task/i)).toBeInTheDocument();
   });
 
-  it('shows empty state when no tasks', async () => {
+  it('renders kanban columns', async () => {
     render(<InboxView />);
-    expect(await screen.findByText(/all clear/i)).toBeInTheDocument();
+    expect(await screen.findByText(/📥 Inbox/)).toBeInTheDocument();
+    expect(screen.getByText(/🎯 Do/)).toBeInTheDocument();
+    expect(screen.getByText(/📤 Delegated/)).toBeInTheDocument();
+    expect(screen.getByText(/✅ Done/)).toBeInTheDocument();
   });
 });
