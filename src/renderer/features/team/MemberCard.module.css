@@ -1,0 +1,38 @@
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.role {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tag {
+  font-size: 0.75rem;
+  background: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.notes {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
