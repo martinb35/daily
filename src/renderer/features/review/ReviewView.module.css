@@ -1,10 +1,35 @@
 .review {
-  max-width: 700px;
+  max-width: 800px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .heading {
   font-size: 1.5rem;
-  margin-bottom: 20px;
+}
+
+.btnStart {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btnStart:hover {
+  opacity: 0.85;
+}
+
+.loading {
+  color: var(--color-text-muted);
 }
 
 .empty {
@@ -12,30 +37,189 @@
   font-style: italic;
 }
 
-.loading {
-  color: var(--color-text-muted);
-}
-
-.list {
-  list-style: none;
-}
-
-.item {
+/* Create Panel */
+.createPanel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
-.week {
-  font-weight: 600;
+.panelTitle {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
 }
 
-.stats {
-  font-size: 0.85rem;
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.summaryCard {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.summaryNumber {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
   color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.taskList {
+  list-style: none;
+  text-align: left;
+}
+
+.taskItem {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.taskItem:last-child {
+  border-bottom: none;
+}
+
+.statusBadge {
+  font-size: 0.65rem;
+  background: var(--color-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.notesField {
+  margin-bottom: 16px;
+}
+
+.notesLabel {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.notesInput {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  outline: none;
+  resize: vertical;
+}
+
+.notesInput:focus {
+  border-color: var(--color-accent);
+}
+
+.createActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnSave {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btnCancel {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Past Reviews */
+.history {
+  margin-top: 8px;
+}
+
+.historyTitle {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.historyItem {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.historyHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.historyWeek {
+  font-weight: 600;
+  flex: 1;
+}
+
+.historyStats {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-right: 12px;
+}
+
+.expandIcon {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.historyBody {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.historyNotes {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.historyDetail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  font-size: 0.8rem;
 }

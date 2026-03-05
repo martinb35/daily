@@ -10,8 +10,9 @@ vi.mock('../../hooks/useIpc', () => ({
 }));
 
 describe('ReviewView', () => {
-  it('renders the review heading', async () => {
+  it('renders heading and start review button', async () => {
     render(<ReviewView />);
     expect(await screen.findByRole('heading', { name: /weekly review/i })).toBeInTheDocument();
+    expect(screen.getByText(/start this week/i)).toBeInTheDocument();
   });
 });
