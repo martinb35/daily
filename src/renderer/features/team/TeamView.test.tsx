@@ -10,8 +10,9 @@ vi.mock('../../hooks/useIpc', () => ({
 }));
 
 describe('TeamView', () => {
-  it('renders the team heading', async () => {
+  it('renders the team heading and add button', async () => {
     render(<TeamView />);
     expect(await screen.findByRole('heading', { name: /team/i })).toBeInTheDocument();
+    expect(screen.getByText(/add member/i)).toBeInTheDocument();
   });
 });

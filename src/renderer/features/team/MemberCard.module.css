@@ -5,15 +5,53 @@
   padding: 16px;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 4px;
+}
+
+.btnEdit,
+.btnDelete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.btnEdit:hover,
+.btnDelete:hover {
+  opacity: 1;
+}
+
+.btnDelete {
+  color: var(--color-accent);
+}
+
 .name {
   font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 4px;
 }
 
 .role {
   font-size: 0.85rem;
   color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.delegated {
+  font-size: 0.8rem;
+  color: #3498db;
   margin-bottom: 8px;
 }
 
