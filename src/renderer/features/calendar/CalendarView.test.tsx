@@ -10,8 +10,10 @@ vi.mock('../../hooks/useIpc', () => ({
 }));
 
 describe('CalendarView', () => {
-  it('renders the calendar heading', async () => {
+  it('renders toolbar with day/week toggle and today button', async () => {
     render(<CalendarView />);
-    expect(await screen.findByText(/calendar/i)).toBeInTheDocument();
+    expect(await screen.findByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Day')).toBeInTheDocument();
+    expect(screen.getByText('Week')).toBeInTheDocument();
   });
 });
