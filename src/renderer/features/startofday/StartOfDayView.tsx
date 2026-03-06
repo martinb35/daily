@@ -99,6 +99,13 @@ export function StartOfDayView() {
             <span>Suggest time blocks for your open tasks</span>
           </div>
         </li>
+        <li className={styles.checkItem}>
+          <span className={styles.checkIcon}>🧘</span>
+          <div className={styles.checkLabel}>
+            <strong>Wellness Breaks</strong>
+            <span>Schedule walks, stretches, and screen breaks</span>
+          </div>
+        </li>
       </ul>
 
       <button

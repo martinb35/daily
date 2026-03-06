@@ -67,6 +67,15 @@ Look at my current active tasks (listed above) and today's calendar. For tasks w
 - Use color \`#9B59B6\` for focus/task blocks
 - Ask me to confirm before writing
 
+### 4. Wellness Breaks
+After scheduling tasks, look at the remaining gaps in my day and suggest breaks:
+- A short walk (15–20 min) ideally mid-morning or after lunch
+- Stretch breaks (5–10 min) roughly every 90 minutes of desk time
+- At least one proper break away from the screen
+- Add these as time blocks in \`timeblocks.json\` with color \`#1ABC9C\`
+- Title format: "🚶 Walk", "🧘 Stretch", etc.
+- Ask me to confirm before writing
+
 ## Data Format Reference
 
 **Task:**
