@@ -121,7 +121,7 @@ export function InboxView() {
             📤 Delegated <span className={styles.count}>{delegatedTasks.length}</span>
           </h3>
           {delegatedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} compact />
           ))}
         </div>
         <div className={styles.column}>
@@ -129,7 +129,7 @@ export function InboxView() {
             ✅ Done <span className={styles.count}>{doneTasks.length}</span>
           </h3>
           {doneTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDelete={handleDelete} />
+            <TaskCard key={task.id} task={task} onDelete={handleDelete} compact />
           ))}
         </div>
       </div>

@@ -10,9 +10,10 @@ interface TaskCardProps {
   onDefer?: (task: Task) => void;
   onDone?: (task: Task) => void;
   onDelete?: (task: Task) => void;
+  compact?: boolean;
 }
 
-export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, compact }: TaskCardProps) {
   const [showDelegateMenu, setShowDelegateMenu] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const { invoke } = useIpc();
@@ -33,16 +34,17 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete }: 
     : null;
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${compact ? styles.compact : ''}`}>
       {onDelete && (
         <button className={styles.btnDelete} onClick={() => onDelete(task)} title="Delete task">
           ✕
         </button>
       )}
       <h4 className={styles.title}>{task.title}</h4>
-      {task.description && <p className={styles.description}>{task.description}</p>}
+      {!compact && task.description && <p className={styles.description}>{task.description}</p>}
       {assigneeName && <p className={styles.assignee}>→ {assigneeName}</p>}
 
+      {!compact && (
       <div className={styles.actions}>
         {task.status === 'inbox' && (
           <>
@@ -91,6 +93,7 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete }: 
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }

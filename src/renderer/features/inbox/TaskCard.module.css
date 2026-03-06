@@ -31,6 +31,20 @@
   color: #e74c3c;
 }
 
+.compact {
+  padding: 8px 12px;
+}
+
+.compact .title {
+  font-size: 0.8rem;
+  margin-bottom: 0;
+}
+
+.compact .assignee {
+  font-size: 0.75rem;
+  margin-bottom: 0;
+}
+
 .title {
   font-size: 0.9rem;
   font-weight: 600;
