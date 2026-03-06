@@ -4,6 +4,7 @@ import styles from './Sidebar.module.css';
 
 const navItems = [
   { to: '/inbox', label: '📥 Inbox' },
+  { to: '/startofday', label: '☀️ Start My Day' },
   { to: '/team', label: '👥 Team' },
   { to: '/calendar', label: '📅 Calendar' },
   { to: '/review', label: '📊 Review' },
