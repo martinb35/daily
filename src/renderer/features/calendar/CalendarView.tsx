@@ -96,14 +96,22 @@ export function CalendarView() {
   const getBlocksForDate = (date: string) =>
     timeblocks.filter((b) => b.start.startsWith(date));
 
+  const now = new Date();
+
   const getBlockStyle= (block: TimeBlock) => {
     const startH = parseInt(block.start.slice(11, 13));
     const startM = parseInt(block.start.slice(14, 16));
     const endH = parseInt(block.end.slice(11, 13));
     const endM = parseInt(block.end.slice(14, 16));
-    const top = ((startH - START_HOUR) * 60 + startM) * (60 / 60); // 1px per min
+    const top = ((startH - START_HOUR) * 60 + startM) * (60 / 60);
     const height = ((endH - startH) * 60 + (endM - startM)) * (60 / 60);
-    return { top: `${top}px`, height: `${Math.max(height, 20)}px`, background: block.color };
+    const isPast = new Date(block.end) < now;
+    return {
+      top: `${top}px`,
+      height: `${Math.max(height, 20)}px`,
+      background: block.color,
+      opacity: isPast ? 0.4 : 1,
+    };
   };
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
