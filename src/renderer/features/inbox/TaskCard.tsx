@@ -7,15 +7,24 @@ interface TaskCardProps {
   task: Task;
   onDo?: (task: Task) => void;
   onDelegate?: (task: Task, assigneeId: string) => void;
-  onDefer?: (task: Task) => void;
+  onDefer?: (task: Task, days: number) => void;
   onDone?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onMoveToInbox?: (task: Task) => void;
   compact?: boolean;
 }
 
+const DEFER_OPTIONS = [
+  { label: '1 day', days: 1 },
+  { label: '3 days', days: 3 },
+  { label: '1 week', days: 7 },
+  { label: '2 weeks', days: 14 },
+  { label: '1 month', days: 30 },
+];
+
 export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, onMoveToInbox, compact }: TaskCardProps) {
   const [showDelegateMenu, setShowDelegateMenu] = useState(false);
+  const [showDeferMenu, setShowDeferMenu] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const { invoke } = useIpc();
 
@@ -44,6 +53,11 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
       <h4 className={styles.title}>{task.title}</h4>
       {!compact && task.description && <p className={styles.description}>{task.description}</p>}
       {assigneeName && <p className={styles.assignee}>→ {assigneeName}</p>}
+      {task.deferUntil && (
+        <p className={styles.deferDate}>
+          💤 Until {new Date(task.deferUntil).toLocaleDateString()}
+        </p>
+      )}
 
       {!compact && (
       <div className={styles.actions}>
@@ -82,9 +96,31 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
               </div>
             )}
             {onDefer && (
-              <button className={styles.btnDefer} onClick={() => onDefer(task)}>
-                Defer
-              </button>
+              <div className={styles.delegateWrap}>
+                <button
+                  className={styles.btnDefer}
+                  onClick={() => setShowDeferMenu(!showDeferMenu)}
+                >
+                  Defer
+                </button>
+                {showDeferMenu && (
+                  <ul className={styles.dropdown}>
+                    {DEFER_OPTIONS.map((opt) => (
+                      <li key={opt.days}>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => {
+                            onDefer(task, opt.days);
+                            setShowDeferMenu(false);
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </>
         )}

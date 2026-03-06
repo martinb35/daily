@@ -43,3 +43,16 @@
 .loading {
   color: var(--color-text-muted);
 }
+
+.snoozed {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.snoozedHeader {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}

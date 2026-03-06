@@ -63,6 +63,12 @@
   margin-bottom: 8px;
 }
 
+.deferDate {
+  font-size: 0.75rem;
+  color: #95a5a6;
+  margin-bottom: 8px;
+}
+
 .actions {
   display: flex;
   gap: 6px;

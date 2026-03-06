@@ -56,10 +56,20 @@ export function InboxView() {
     updateTask(updated);
   };
 
-  const handleDefer = async (task: Task) => {
+  const handleDefer = async (task: Task, days: number) => {
     const updated: Task = {
       ...task,
-      deferUntil: new Date(Date.now() + 7 * 86400000).toISOString(),
+      deferUntil: new Date(Date.now() + days * 86400000).toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await invoke('tasks:update', updated);
+    updateTask(updated);
+  };
+
+  const handleUndefer = async (task: Task) => {
+    const updated: Task = {
+      ...task,
+      deferUntil: null,
       updatedAt: new Date().toISOString(),
     };
     await invoke('tasks:update', updated);
@@ -87,6 +97,9 @@ export function InboxView() {
   const inboxTasks = tasks.filter(
     (t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= now),
   );
+  const snoozedTasks = tasks.filter(
+    (t) => t.status === 'inbox' && t.deferUntil && t.deferUntil > now,
+  );
   const scheduledTasks = tasks.filter((t) => t.status === 'scheduled');
   const delegatedTasks = tasks.filter((t) => t.status === 'delegated');
   const doneTasks = tasks.filter((t) => t.status === 'done');
@@ -113,6 +126,22 @@ export function InboxView() {
               onDelete={handleDelete}
             />
           ))}
+          {snoozedTasks.length > 0 && (
+            <div className={styles.snoozed}>
+              <h4 className={styles.snoozedHeader}>
+                💤 Snoozed <span className={styles.count}>{snoozedTasks.length}</span>
+              </h4>
+              {snoozedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onMoveToInbox={handleUndefer}
+                  onDelete={handleDelete}
+                  compact
+                />
+              ))}
+            </div>
+          )}
         </div>
         <div className={styles.column}>
           <h3 className={styles.columnHeader}>
