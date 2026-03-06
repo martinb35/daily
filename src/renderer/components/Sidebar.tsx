@@ -7,6 +7,7 @@ const navItems = [
   { to: '/team', label: '👥 Team' },
   { to: '/calendar', label: '📅 Calendar' },
   { to: '/review', label: '📊 Review' },
+  { to: '/endofday', label: '🌙 End My Day' },
 ];
 
 export function Sidebar() {

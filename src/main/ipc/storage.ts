@@ -10,6 +10,10 @@ export function ensureDataDir(): void {
   }
 }
 
+export function getDataDir(): string {
+  return dataDir;
+}
+
 export function readJsonFile<T>(filename: string): T[] {
   ensureDataDir();
   const filePath = path.join(dataDir, filename);

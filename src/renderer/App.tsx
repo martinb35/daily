@@ -5,6 +5,7 @@ import { InboxView } from './features/inbox/InboxView';
 import { TeamView } from './features/team/TeamView';
 import { CalendarView } from './features/calendar/CalendarView';
 import { ReviewView } from './features/review/ReviewView';
+import { EndOfDayView } from './features/endofday/EndOfDayView';
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route path="/team" element={<TeamView />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="/review" element={<ReviewView />} />
+          <Route path="/endofday" element={<EndOfDayView />} />
         </Routes>
       </Layout>
     </HashRouter>

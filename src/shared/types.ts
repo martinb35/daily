@@ -66,4 +66,5 @@ export type IpcChannels =
   | 'timeblocks:delete'
   | 'reviews:list'
   | 'reviews:create'
-  | 'reviews:get';
+  | 'reviews:get'
+  | 'app:getDataPath';
