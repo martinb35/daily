@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { useInboxStore } from './inboxStore';
 import { TaskCard } from './TaskCard';
@@ -14,6 +14,7 @@ function generateId(): string {
 export function InboxView() {
   const { tasks, setTasks, addTask, updateTask, removeTask, setLoading, loading } = useInboxStore();
   const { invoke } = useIpc();
+  const [snoozedOpen, setSnoozedOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -128,10 +129,14 @@ export function InboxView() {
           ))}
           {snoozedTasks.length > 0 && (
             <div className={styles.snoozed}>
-              <h4 className={styles.snoozedHeader}>
+              <h4
+                className={styles.snoozedHeader}
+                onClick={() => setSnoozedOpen(!snoozedOpen)}
+              >
+                <span className={styles.toggle}>{snoozedOpen ? '▾' : '▸'}</span>
                 💤 Snoozed <span className={styles.count}>{snoozedTasks.length}</span>
               </h4>
-              {snoozedTasks.map((task) => (
+              {snoozedOpen && snoozedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}

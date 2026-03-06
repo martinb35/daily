@@ -55,4 +55,16 @@
   font-weight: 600;
   color: var(--color-text-muted);
   margin-bottom: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.snoozedHeader:hover {
+  color: var(--color-text);
+}
+
+.toggle {
+  display: inline-block;
+  width: 14px;
+  font-size: 0.75rem;
 }
