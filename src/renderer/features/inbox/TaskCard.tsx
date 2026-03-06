@@ -136,6 +136,14 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
         )}
       </div>
       )}
+
+      {compact && onMoveToInbox && (
+        <div className={styles.actions}>
+          <button className={styles.btnDefer} onClick={() => onMoveToInbox(task)}>
+            ← Inbox
+          </button>
+        </div>
+      )}
     </div>
   );
 }
