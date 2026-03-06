@@ -96,7 +96,7 @@ export function CalendarView() {
   const getBlocksForDate = (date: string) =>
     timeblocks.filter((b) => b.start.startsWith(date));
 
-  const getBlockStyle = (block: TimeBlock) => {
+  const getBlockStyle= (block: TimeBlock) => {
     const startH = parseInt(block.start.slice(11, 13));
     const startM = parseInt(block.start.slice(14, 16));
     const endH = parseInt(block.end.slice(11, 13));
@@ -124,7 +124,8 @@ export function CalendarView() {
               : `${formatDate(weekStart)} – ${formatDate(addDays(weekStart, 4))}`}
           </span>
         </div>
-        <div className={styles.viewToggle}>
+        <div className={styles.rightControls}>
+          <div className={styles.viewToggle}>
           <button
             className={`${styles.toggleBtn} ${viewMode === 'day' ? styles.toggleActive : ''}`}
             onClick={() => setViewMode('day')}
@@ -137,6 +138,7 @@ export function CalendarView() {
           >
             Week
           </button>
+          </div>
         </div>
       </div>
 
