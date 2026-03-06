@@ -10,10 +10,11 @@ interface TaskCardProps {
   onDefer?: (task: Task) => void;
   onDone?: (task: Task) => void;
   onDelete?: (task: Task) => void;
+  onMoveToInbox?: (task: Task) => void;
   compact?: boolean;
 }
 
-export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, compact }: TaskCardProps) {
+export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, onMoveToInbox, compact }: TaskCardProps) {
   const [showDelegateMenu, setShowDelegateMenu] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const { invoke } = useIpc();
@@ -86,6 +87,11 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, co
               </button>
             )}
           </>
+        )}
+        {task.status === 'scheduled' && onMoveToInbox && (
+          <button className={styles.btnDefer} onClick={() => onMoveToInbox(task)}>
+            ← Inbox
+          </button>
         )}
         {task.status !== 'done' && onDone && (
           <button className={styles.btnDone} onClick={() => onDone(task)}>

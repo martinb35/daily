@@ -72,6 +72,12 @@ export function InboxView() {
     updateTask(updated);
   };
 
+  const handleMoveToInbox = async (task: Task) => {
+    const updated: Task = { ...task, status: 'inbox', updatedAt: new Date().toISOString() };
+    await invoke('tasks:update', updated);
+    updateTask(updated);
+  };
+
   const handleDelete = async (task: Task) => {
     removeTask(task.id);
     await invoke('tasks:delete', task.id);
@@ -113,7 +119,7 @@ export function InboxView() {
             🎯 Do <span className={styles.count}>{scheduledTasks.length}</span>
           </h3>
           {scheduledTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onMoveToInbox={handleMoveToInbox} />
           ))}
         </div>
         <div className={styles.column}>
