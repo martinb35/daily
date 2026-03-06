@@ -19,10 +19,10 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, co
   const { invoke } = useIpc();
 
   useEffect(() => {
-    if (showDelegateMenu && teamMembers.length === 0) {
+    if (teamMembers.length === 0) {
       invoke<TeamMember[]>('team:list').then(setTeamMembers);
     }
-  }, [showDelegateMenu]);
+  }, []);
 
   const handleDelegate = (memberId: string) => {
     onDelegate?.(task, memberId);
