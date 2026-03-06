@@ -9,9 +9,10 @@ interface TaskCardProps {
   onDelegate?: (task: Task, assigneeId: string) => void;
   onDefer?: (task: Task) => void;
   onDone?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
 }
 
-export function TaskCard({ task, onDo, onDelegate, onDefer, onDone }: TaskCardProps) {
+export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete }: TaskCardProps) {
   const [showDelegateMenu, setShowDelegateMenu] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const { invoke } = useIpc();
@@ -33,6 +34,11 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone }: TaskCardPr
 
   return (
     <div className={styles.card}>
+      {onDelete && (
+        <button className={styles.btnDelete} onClick={() => onDelete(task)} title="Delete task">
+          ✕
+        </button>
+      )}
       <h4 className={styles.title}>{task.title}</h4>
       {task.description && <p className={styles.description}>{task.description}</p>}
       {assigneeName && <p className={styles.assignee}>→ {assigneeName}</p>}

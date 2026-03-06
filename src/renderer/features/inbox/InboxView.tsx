@@ -12,7 +12,7 @@ function generateId(): string {
 }
 
 export function InboxView() {
-  const { tasks, setTasks, addTask, updateTask, setLoading, loading } = useInboxStore();
+  const { tasks, setTasks, addTask, updateTask, removeTask, setLoading, loading } = useInboxStore();
   const { invoke } = useIpc();
 
   useEffect(() => {
@@ -72,7 +72,15 @@ export function InboxView() {
     updateTask(updated);
   };
 
-  const inboxTasks = tasks.filter((t) => t.status === 'inbox');
+  const handleDelete = async (task: Task) => {
+    removeTask(task.id);
+    await invoke('tasks:delete', task.id);
+  };
+
+  const now = new Date().toISOString();
+  const inboxTasks = tasks.filter(
+    (t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= now),
+  );
   const scheduledTasks = tasks.filter((t) => t.status === 'scheduled');
   const delegatedTasks = tasks.filter((t) => t.status === 'delegated');
   const doneTasks = tasks.filter((t) => t.status === 'done');
@@ -96,6 +104,7 @@ export function InboxView() {
               onDelegate={handleDelegate}
               onDefer={handleDefer}
               onDone={handleDone}
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -104,7 +113,7 @@ export function InboxView() {
             🎯 Do <span className={styles.count}>{scheduledTasks.length}</span>
           </h3>
           {scheduledTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} />
           ))}
         </div>
         <div className={styles.column}>
@@ -112,7 +121,7 @@ export function InboxView() {
             📤 Delegated <span className={styles.count}>{delegatedTasks.length}</span>
           </h3>
           {delegatedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} />
           ))}
         </div>
         <div className={styles.column}>
@@ -120,7 +129,7 @@ export function InboxView() {
             ✅ Done <span className={styles.count}>{doneTasks.length}</span>
           </h3>
           {doneTasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard key={task.id} task={task} onDelete={handleDelete} />
           ))}
         </div>
       </div>
