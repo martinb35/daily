@@ -12,6 +12,8 @@ export function EndOfDayView() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [dataPath, setDataPath] = useState('');
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [showEditor, setShowEditor] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState('');
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -36,20 +38,23 @@ export function EndOfDayView() {
       .finally(() => setLoading(false));
   }, []);
 
+  const getPrompt = () => generatePrompt({ today: todayStr, dataPath, tasks, timeblocks, team });
+
   const handleGenerate = async () => {
     try {
-      const prompt = generatePrompt({
-        today: todayStr,
-        dataPath,
-        tasks,
-        timeblocks,
-        team,
-      });
+      const prompt = showEditor && editedPrompt ? editedPrompt : getPrompt();
       await navigator.clipboard.writeText(prompt);
       setStatus('copied');
     } catch {
       setStatus('error');
     }
+  };
+
+  const handleToggleEditor = () => {
+    if (!showEditor) {
+      setEditedPrompt(getPrompt());
+    }
+    setShowEditor(!showEditor);
   };
 
   if (loading) return <div className={styles.container}>Loading...</div>;
@@ -115,6 +120,19 @@ export function EndOfDayView() {
       >
         Copy Prompt to Clipboard
       </button>
+
+      <button className={styles.editToggle} onClick={handleToggleEditor}>
+        {showEditor ? 'Hide prompt' : '✎ View / edit prompt'}
+      </button>
+
+      {showEditor && (
+        <textarea
+          className={styles.promptEditor}
+          value={editedPrompt}
+          onChange={(e) => setEditedPrompt(e.target.value)}
+          spellCheck={false}
+        />
+      )}
 
       {status === 'copied' && (
         <div className={`${styles.status} ${styles.success}`}>

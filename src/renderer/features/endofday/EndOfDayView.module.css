@@ -88,6 +88,37 @@
   color: #e74c3c;
 }
 
+.editToggle {
+  display: block;
+  margin: 12px auto 0;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.editToggle:hover {
+  opacity: 1;
+}
+
+.promptEditor {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 .stats {
   display: flex;
   gap: 16px;
