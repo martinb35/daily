@@ -104,16 +104,25 @@ export function InboxView() {
     await invoke('tasks:delete', task.id);
   };
 
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const inboxTasks = tasks.filter(
-    (t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= now),
+    (t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= nowIso),
   );
   const snoozedTasks = tasks.filter(
-    (t) => t.status === 'inbox' && t.deferUntil && t.deferUntil > now,
+    (t) => t.status === 'inbox' && t.deferUntil && t.deferUntil > nowIso,
   );
   const scheduledTasks = tasks.filter((t) => t.status === 'scheduled');
   const delegatedTasks = tasks.filter((t) => t.status === 'delegated');
-  const doneTasks = tasks.filter((t) => t.status === 'done');
+
+  // Done column only shows tasks completed in the current week (Mon–Sun)
+  const weekStart = new Date(now);
+  const dayOfWeek = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  weekStart.setHours(0, 0, 0, 0);
+  const doneTasks = tasks.filter(
+    (t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart,
+  );
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
 
