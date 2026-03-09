@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useIpc } from '../../hooks/useIpc';
+import { useSound } from '../../hooks/useSound';
 import { generatePrompt } from './generatePrompt';
 import type { Task, TimeBlock, TeamMember } from '@shared/types';
 import styles from '../endofday/EndOfDayView.module.css';
 
 export function StartOfDayView() {
   const { invoke } = useIpc();
+  const playSound = useSound();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeblocks, setTimeblocks] = useState<TimeBlock[]>([]);
@@ -45,6 +47,7 @@ export function StartOfDayView() {
       const prompt = showEditor && editedPrompt ? editedPrompt : getPrompt();
       await navigator.clipboard.writeText(prompt);
       setStatus('copied');
+      playSound('copy');
     } catch {
       setStatus('error');
     }

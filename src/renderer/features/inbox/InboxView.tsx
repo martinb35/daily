@@ -5,6 +5,7 @@ import { TaskCard } from './TaskCard';
 import { QuickAdd } from './QuickAdd';
 import { useIpc } from '../../hooks/useIpc';
 import type { Task, TeamMember } from '@shared/types';
+import { useSound } from '../../hooks/useSound';
 import styles from './InboxView.module.css';
 
 function generateId(): string {
@@ -14,6 +15,7 @@ function generateId(): string {
 export function InboxView() {
   const { tasks, setTasks, addTask, updateTask, removeTask, setLoading, loading } = useInboxStore();
   const { invoke } = useIpc();
+  const playSound = useSound();
   const [snoozedOpen, setSnoozedOpen] = useState(false);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export function InboxView() {
       updatedAt: now,
     };
     addTask(task);
+    playSound('add');
     await invoke('tasks:create', task);
   };
 
@@ -44,6 +47,7 @@ export function InboxView() {
     const updated: Task = { ...task, status: 'scheduled', updatedAt: new Date().toISOString() };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('triage');
   };
 
   const handleDelegate = async (task: Task, assigneeId: string) => {
@@ -55,6 +59,7 @@ export function InboxView() {
     };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('triage');
   };
 
   const handleDefer = async (task: Task, days: number) => {
@@ -65,6 +70,7 @@ export function InboxView() {
     };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('defer');
   };
 
   const handleUndefer = async (task: Task) => {
@@ -75,22 +81,26 @@ export function InboxView() {
     };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('moveBack');
   };
 
   const handleDone = async (task: Task) => {
     const updated: Task = { ...task, status: 'done', updatedAt: new Date().toISOString() };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('complete');
   };
 
   const handleMoveToInbox = async (task: Task) => {
     const updated: Task = { ...task, status: 'inbox', updatedAt: new Date().toISOString() };
     await invoke('tasks:update', updated);
     updateTask(updated);
+    playSound('moveBack');
   };
 
   const handleDelete = async (task: Task) => {
     removeTask(task.id);
+    playSound('delete');
     await invoke('tasks:delete', task.id);
   };
 
