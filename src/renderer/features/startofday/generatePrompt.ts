@@ -46,6 +46,7 @@ Run the following start-of-day workflow using WorkIQ (Microsoft 365 Copilot) and
 
 ### 1. Meeting Review & Conflict Resolution
 Query WorkIQ for all my meetings today with their acceptance status.
+- **Compare against today's existing time blocks** listed above. For each existing block, check if the meeting has been rescheduled (time changed), canceled, or renamed — update or remove stale entries in \`timeblocks.json\`
 - List each meeting with time, attendees, and whether I've accepted/tentative/declined
 - **Detect any overlapping meetings** and flag them as conflicts
 - For each conflict, suggest which meeting to attend based on priority (1:1s > external partners > team meetings > optional/large groups) and ask me to choose
