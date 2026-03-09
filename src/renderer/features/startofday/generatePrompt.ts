@@ -44,12 +44,14 @@ ${ctx.team.length > 0 ? formatJson(ctx.team) : 'No team members configured.'}
 
 Run the following start-of-day workflow using WorkIQ (Microsoft 365 Copilot) and update my Daily app data files directly.
 
-### 1. Meeting Review
+### 1. Meeting Review & Conflict Resolution
 Query WorkIQ for all my meetings today with their acceptance status.
 - List each meeting with time, attendees, and whether I've accepted/tentative/declined
+- **Detect any overlapping meetings** and flag them as conflicts
+- For each conflict, suggest which meeting to attend based on priority (1:1s > external partners > team meetings > optional/large groups) and ask me to choose
 - For meetings I haven't responded to, suggest accept or decline with a brief reason
 - Ask me to confirm your suggestions before updating
-- Add any confirmed meetings missing from \`timeblocks.json\`
+- Only add confirmed/chosen meetings to \`timeblocks.json\` — skip declined and conflicted-out meetings
 - Colors: \`#2ECC71\` for 1:1s, \`#4A90D9\` for team meetings, \`#E67E22\` for external, \`#9B59B6\` for focus time
 
 ### 2. Teams & Email Check

@@ -86,8 +86,8 @@ export function StartOfDayView() {
         <li className={styles.checkItem}>
           <span className={styles.checkIcon}>📅</span>
           <div className={styles.checkLabel}>
-            <strong>Meeting Review</strong>
-            <span>Check today's meetings and confirm attendance</span>
+            <strong>Meeting Review & Conflicts</strong>
+            <span>Check today's meetings, resolve overlaps, and confirm attendance</span>
           </div>
         </li>
         <li className={styles.checkItem}>
