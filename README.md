@@ -42,3 +42,33 @@ npm run dev
 ## How the Copilot CLI Workflows Work
 
 The Start/End My Day features don't call Microsoft 365 directly. Instead they generate a structured prompt containing your current tasks, calendar, and team data. You copy the prompt to your clipboard and paste it into [GitHub Copilot CLI](https://githubnext.com/projects/copilot-cli/) which uses the WorkIQ MCP plugin to query your M365 data (meetings, emails, Teams) and writes results back to the app's JSON data files.
+
+## MCP Server
+
+The `mcp-server/` directory contains a standalone MCP server that exposes Daily's data (tasks, timeblocks, team, reviews) as tools for GitHub Copilot CLI. This lets Copilot read and write your app data directly instead of using raw shell commands.
+
+### Setup
+
+```bash
+cd mcp-server
+npm install
+npm run build
+```
+
+Then register it with Copilot CLI:
+
+```
+/mcp add daily-data -- node <path-to-repo>/mcp-server/dist/index.js
+```
+
+The server persists in your MCP config — no need to re-register after restarting Copilot CLI.
+
+### Tools (21)
+
+| Entity | Tools |
+|--------|-------|
+| Tasks | `tasks_list`, `tasks_get`, `tasks_create`, `tasks_update`, `tasks_delete` |
+| Time Blocks | `timeblocks_list`, `timeblocks_get`, `timeblocks_create`, `timeblocks_update`, `timeblocks_delete` |
+| Team | `team_list`, `team_get`, `team_create`, `team_update`, `team_delete` |
+| Reviews | `reviews_list`, `reviews_get`, `reviews_create`, `reviews_update`, `reviews_delete` |
+| Utility | `data_path` |
