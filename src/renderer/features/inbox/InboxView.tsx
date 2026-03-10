@@ -147,6 +147,12 @@ export function InboxView() {
     await invoke('tasks:delete', task.id);
   };
 
+  const handleUpdate = async (task: Task) => {
+    const updated: Task = { ...task, updatedAt: new Date().toISOString() };
+    await invoke('tasks:update', updated);
+    updateTask(updated);
+  };
+
   const now = new Date();
   const nowIso = now.toISOString();
   const inboxTasks = tasks.filter(
@@ -193,6 +199,7 @@ export function InboxView() {
               onDefer={handleDefer}
               onDone={handleDone}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           ))}
           {snoozedTasks.length > 0 && (
@@ -221,7 +228,7 @@ export function InboxView() {
             🎯 Do <span className={styles.count}>{scheduledTasks.length}</span>
           </h3>
           {scheduledTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onMoveToInbox={handleMoveToInbox} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onMoveToInbox={handleMoveToInbox} onUpdate={handleUpdate} />
           ))}
         </div>
         <div className={styles.column}>
@@ -229,7 +236,7 @@ export function InboxView() {
             📤 Delegated <span className={styles.count}>{delegatedTasks.length}</span>
           </h3>
           {delegatedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} compact />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onUpdate={handleUpdate} compact />
           ))}
         </div>
         <div className={styles.column}>
