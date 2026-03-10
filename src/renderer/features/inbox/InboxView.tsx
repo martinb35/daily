@@ -84,9 +84,12 @@ export function InboxView() {
   };
 
   const handleDefer = async (task: Task, days: number) => {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    target.setHours(7, 0, 0, 0); // 7 AM local (PST/PDT)
     const updated: Task = {
       ...task,
-      deferUntil: new Date(Date.now() + days * 86400000).toISOString(),
+      deferUntil: target.toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await invoke('tasks:update', updated);
