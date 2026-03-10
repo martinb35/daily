@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile, getDataDir } from './storage.js';
-import type { Task, TeamMember, TimeBlock, ReviewSnapshot } from './types.js';
+import type { Task, TeamMember, TimeBlock, ReviewSnapshot, WeeklyScore } from './types.js';
 
 // --- Server setup ---
 
@@ -78,6 +78,7 @@ server.registerTool('tasks_create', {
     assigneeId: args.assigneeId ?? null,
     dueDate: args.dueDate ?? null,
     deferUntil: args.deferUntil ?? null,
+    points: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -98,6 +99,7 @@ server.registerTool('tasks_update', {
     assigneeId: z.string().nullable().optional().describe('New assignee ID'),
     dueDate: z.string().nullable().optional().describe('New due date'),
     deferUntil: z.string().nullable().optional().describe('New defer-until date'),
+    points: z.number().nullable().optional().describe('Productivity points (auto-calculated on completion)'),
   },
 }, async (args) => {
   const tasks = readJsonFile<Task>('tasks.json');
@@ -110,6 +112,7 @@ server.registerTool('tasks_update', {
   if (args.assigneeId !== undefined) task.assigneeId = args.assigneeId;
   if (args.dueDate !== undefined) task.dueDate = args.dueDate;
   if (args.deferUntil !== undefined) task.deferUntil = args.deferUntil;
+  if (args.points !== undefined) task.points = args.points;
   task.updatedAt = new Date().toISOString();
   tasks[index] = task;
   writeJsonFile('tasks.json', tasks);
@@ -348,6 +351,7 @@ server.registerTool('reviews_create', {
     completedTaskIds: z.array(z.string()).optional().default([]),
     delegatedTaskIds: z.array(z.string()).optional().default([]),
     deferredTaskIds: z.array(z.string()).optional().default([]),
+    totalPoints: z.number().optional().default(0),
     notes: z.string().optional().default(''),
   },
 }, async (args) => {
@@ -358,6 +362,7 @@ server.registerTool('reviews_create', {
     completedTaskIds: args.completedTaskIds ?? [],
     delegatedTaskIds: args.delegatedTaskIds ?? [],
     deferredTaskIds: args.deferredTaskIds ?? [],
+    totalPoints: args.totalPoints ?? 0,
     notes: args.notes ?? '',
     createdAt: new Date().toISOString(),
   };
@@ -403,6 +408,85 @@ server.registerTool('reviews_delete', {
   const filtered = reviews.filter(r => r.id !== id);
   if (filtered.length === reviews.length) return jsonResult({ error: `Review not found: ${id}` });
   writeJsonFile('reviews.json', filtered);
+  return jsonResult({ deleted: id });
+});
+
+// =============================================================================
+// SCORES (Weekly Productivity Points)
+// =============================================================================
+
+server.registerTool('scores_list', {
+  title: 'List Weekly Scores',
+  description: 'List all weekly productivity scores',
+  inputSchema: {},
+}, async () => {
+  return jsonResult(readJsonFile<WeeklyScore>('scores.json'));
+});
+
+server.registerTool('scores_get', {
+  title: 'Get Weekly Score',
+  description: 'Get a weekly score by ID',
+  inputSchema: {
+    id: z.string().describe('Score ID'),
+  },
+}, async ({ id }) => {
+  const scores = readJsonFile<WeeklyScore>('scores.json');
+  const score = scores.find(s => s.id === id);
+  return jsonResult(score ?? { error: `Score not found: ${id}` });
+});
+
+server.registerTool('scores_create', {
+  title: 'Create Weekly Score',
+  description: 'Create a new weekly score entry',
+  inputSchema: {
+    id: z.string().describe('Unique score ID'),
+    weekOf: z.string().describe('Monday of the week (ISO 8601 date)'),
+    totalPoints: z.number().default(0),
+    tasksCompleted: z.number().default(0),
+  },
+}, async (args) => {
+  const scores = readJsonFile<WeeklyScore>('scores.json');
+  const score: WeeklyScore = {
+    ...args,
+    updatedAt: new Date().toISOString(),
+  };
+  scores.push(score);
+  writeJsonFile('scores.json', scores);
+  return jsonResult(score);
+});
+
+server.registerTool('scores_update', {
+  title: 'Update Weekly Score',
+  description: 'Update a weekly score by ID',
+  inputSchema: {
+    id: z.string().describe('Score ID to update'),
+    totalPoints: z.number().optional(),
+    tasksCompleted: z.number().optional(),
+  },
+}, async (args) => {
+  const scores = readJsonFile<WeeklyScore>('scores.json');
+  const index = scores.findIndex(s => s.id === args.id);
+  if (index === -1) return jsonResult({ error: `Score not found: ${args.id}` });
+  const score = scores[index];
+  if (args.totalPoints !== undefined) score.totalPoints = args.totalPoints;
+  if (args.tasksCompleted !== undefined) score.tasksCompleted = args.tasksCompleted;
+  score.updatedAt = new Date().toISOString();
+  scores[index] = score;
+  writeJsonFile('scores.json', scores);
+  return jsonResult(score);
+});
+
+server.registerTool('scores_delete', {
+  title: 'Delete Weekly Score',
+  description: 'Delete a weekly score by ID',
+  inputSchema: {
+    id: z.string().describe('Score ID to delete'),
+  },
+}, async ({ id }) => {
+  const scores = readJsonFile<WeeklyScore>('scores.json');
+  const filtered = scores.filter(s => s.id !== id);
+  if (filtered.length === scores.length) return jsonResult({ error: `Score not found: ${id}` });
+  writeJsonFile('scores.json', filtered);
   return jsonResult({ deleted: id });
 });
 

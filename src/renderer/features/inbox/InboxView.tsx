@@ -3,8 +3,10 @@ import { useEffect } from 'react';
 import { useInboxStore } from './inboxStore';
 import { TaskCard } from './TaskCard';
 import { QuickAdd } from './QuickAdd';
+import { PointsWidget } from './PointsWidget';
+import { calculatePoints } from './scoring';
 import { useIpc } from '../../hooks/useIpc';
-import type { Task, TeamMember } from '@shared/types';
+import type { Task, TeamMember, WeeklyScore } from '@shared/types';
 import { useSound } from '../../hooks/useSound';
 import styles from './InboxView.module.css';
 
@@ -12,16 +14,34 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function getMonday(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const dayOfMonth = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${dayOfMonth}`;
+}
+
 export function InboxView() {
   const { tasks, setTasks, addTask, updateTask, removeTask, setLoading, loading } = useInboxStore();
   const { invoke } = useIpc();
   const playSound = useSound();
   const [snoozedOpen, setSnoozedOpen] = useState(false);
+  const [scores, setScores] = useState<WeeklyScore[]>([]);
 
   useEffect(() => {
     setLoading(true);
-    invoke<Task[]>('tasks:list')
-      .then(setTasks)
+    Promise.all([
+      invoke<Task[]>('tasks:list'),
+      invoke<WeeklyScore[]>('scores:list'),
+    ])
+      .then(([taskData, scoreData]) => {
+        setTasks(taskData);
+        setScores(scoreData);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -35,6 +55,7 @@ export function InboxView() {
       assigneeId: null,
       dueDate: null,
       deferUntil: null,
+      points: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -85,10 +106,46 @@ export function InboxView() {
   };
 
   const handleDone = async (task: Task) => {
-    const updated: Task = { ...task, status: 'done', updatedAt: new Date().toISOString() };
+    const pts = calculatePoints(task);
+    const updated: Task = { ...task, status: 'done', points: pts, updatedAt: new Date().toISOString() };
     await invoke('tasks:update', updated);
     updateTask(updated);
     playSound('complete');
+
+    // Update weekly score using functional state update to avoid stale closures
+    const monday = getMonday(new Date());
+    let scoreToPersist: WeeklyScore | null = null;
+    let isUpdate = false;
+
+    setScores((prev) => {
+      const existing = prev.find((s) => s.weekOf === monday);
+      if (existing) {
+        const updatedScore: WeeklyScore = {
+          ...existing,
+          totalPoints: existing.totalPoints + pts,
+          tasksCompleted: existing.tasksCompleted + 1,
+          updatedAt: new Date().toISOString(),
+        };
+        scoreToPersist = updatedScore;
+        isUpdate = true;
+        return prev.map((s) => (s.id === existing.id ? updatedScore : s));
+      } else {
+        const newScore: WeeklyScore = {
+          id: generateId(),
+          weekOf: monday,
+          totalPoints: pts,
+          tasksCompleted: 1,
+          updatedAt: new Date().toISOString(),
+        };
+        scoreToPersist = newScore;
+        isUpdate = false;
+        return [...prev, newScore];
+      }
+    });
+
+    if (scoreToPersist) {
+      await invoke(isUpdate ? 'scores:update' : 'scores:create', scoreToPersist);
+    }
   };
 
   const handleMoveToInbox = async (task: Task) => {
@@ -102,6 +159,12 @@ export function InboxView() {
     removeTask(task.id);
     playSound('delete');
     await invoke('tasks:delete', task.id);
+  };
+
+  const handleUpdate = async (task: Task) => {
+    const updated: Task = { ...task, updatedAt: new Date().toISOString() };
+    await invoke('tasks:update', updated);
+    updateTask(updated);
   };
 
   const now = new Date();
@@ -124,10 +187,16 @@ export function InboxView() {
     (t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart,
   );
 
+  // Points tracking
+  const thisMonday = getMonday(now);
+  const currentScore = scores.find((s) => s.weekOf === thisMonday) ?? null;
+  const highScore = scores.reduce((max, s) => Math.max(max, s.totalPoints), 0);
+
   if (loading) return <div className={styles.loading}>Loading...</div>;
 
   return (
     <div className={styles.inbox}>
+      <PointsWidget currentScore={currentScore} highScore={highScore} />
       <QuickAdd onAdd={handleQuickAdd} />
       <div className={styles.columns}>
         <div className={styles.column}>
@@ -144,6 +213,7 @@ export function InboxView() {
               onDefer={handleDefer}
               onDone={handleDone}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           ))}
           {snoozedTasks.length > 0 && (
@@ -172,7 +242,7 @@ export function InboxView() {
             🎯 Do <span className={styles.count}>{scheduledTasks.length}</span>
           </h3>
           {scheduledTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onMoveToInbox={handleMoveToInbox} />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onMoveToInbox={handleMoveToInbox} onUpdate={handleUpdate} />
           ))}
         </div>
         <div className={styles.column}>
@@ -180,12 +250,15 @@ export function InboxView() {
             📤 Delegated <span className={styles.count}>{delegatedTasks.length}</span>
           </h3>
           {delegatedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} compact />
+            <TaskCard key={task.id} task={task} onDone={handleDone} onDelete={handleDelete} onUpdate={handleUpdate} compact />
           ))}
         </div>
         <div className={styles.column}>
           <h3 className={styles.columnHeader}>
             ✅ Done <span className={styles.count}>{doneTasks.length}</span>
+            {(currentScore?.totalPoints ?? 0) > 0 && (
+              <span className={styles.donePoints}>+{currentScore?.totalPoints} pts</span>
+            )}
           </h3>
           {doneTasks.map((task) => (
             <TaskCard key={task.id} task={task} onDelete={handleDelete} compact />

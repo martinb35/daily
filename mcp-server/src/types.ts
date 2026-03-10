@@ -11,6 +11,7 @@ export interface Task {
   assigneeId: string | null;
   dueDate: string | null;
   deferUntil: string | null;
+  points?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,15 @@ export interface ReviewSnapshot {
   completedTaskIds: string[];
   delegatedTaskIds: string[];
   deferredTaskIds: string[];
+  totalPoints?: number;
   notes: string;
   createdAt: string;
+}
+
+export interface WeeklyScore {
+  id: string;
+  weekOf: string;
+  totalPoints: number;
+  tasksCompleted: number;
+  updatedAt: string;
 }

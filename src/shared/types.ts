@@ -10,6 +10,7 @@ export interface Task {
   assigneeId: string | null; // null = self, otherwise TeamMember.id
   dueDate: string | null; // ISO 8601
   deferUntil: string | null; // ISO 8601 — when deferred, returns to inbox on this date
+  points?: number | null; // auto-calculated when task is completed
   createdAt: string;
   updatedAt: string;
 }
@@ -43,8 +44,19 @@ export interface ReviewSnapshot {
   completedTaskIds: string[];
   delegatedTaskIds: string[];
   deferredTaskIds: string[];
+  totalPoints?: number; // sum of points from completed tasks this week
   notes: string;
   createdAt: string;
+}
+
+// === Weekly Score ===
+
+export interface WeeklyScore {
+  id: string;
+  weekOf: string; // ISO 8601 date (Monday of the week)
+  totalPoints: number;
+  tasksCompleted: number;
+  updatedAt: string;
 }
 
 // === IPC Channels ===
@@ -67,4 +79,9 @@ export type IpcChannels =
   | 'reviews:list'
   | 'reviews:create'
   | 'reviews:get'
+  | 'scores:list'
+  | 'scores:get'
+  | 'scores:create'
+  | 'scores:update'
+  | 'scores:delete'
   | 'app:getDataPath';
