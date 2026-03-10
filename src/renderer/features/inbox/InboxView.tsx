@@ -187,16 +187,21 @@ export function InboxView() {
     (t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart,
   );
 
-  // Points tracking
+  // Points tracking — derive from actual done tasks for accuracy
   const thisMonday = getMonday(now);
   const currentScore = scores.find((s) => s.weekOf === thisMonday) ?? null;
-  const highScore = scores.reduce((max, s) => Math.max(max, s.totalPoints), 0);
+  const weekPoints = doneTasks.reduce((sum, t) => sum + (t.points ?? 0), 0);
+  const weekTaskCount = doneTasks.length;
+  const highScore = Math.max(
+    scores.reduce((max, s) => Math.max(max, s.totalPoints), 0),
+    weekPoints,
+  );
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
 
   return (
     <div className={styles.inbox}>
-      <PointsWidget currentScore={currentScore} highScore={highScore} />
+      <PointsWidget currentScore={currentScore} highScore={highScore} weekPoints={weekPoints} weekTaskCount={weekTaskCount} />
       <QuickAdd onAdd={handleQuickAdd} />
       <div className={styles.columns}>
         <div className={styles.column}>
@@ -256,8 +261,8 @@ export function InboxView() {
         <div className={styles.column}>
           <h3 className={styles.columnHeader}>
             ✅ Done <span className={styles.count}>{doneTasks.length}</span>
-            {(currentScore?.totalPoints ?? 0) > 0 && (
-              <span className={styles.donePoints}>+{currentScore?.totalPoints} pts</span>
+            {weekPoints > 0 && (
+              <span className={styles.donePoints}>+{weekPoints} pts</span>
             )}
           </h3>
           {doneTasks.map((task) => (

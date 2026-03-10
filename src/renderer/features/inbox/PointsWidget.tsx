@@ -5,11 +5,13 @@ import styles from './PointsWidget.module.css';
 interface PointsWidgetProps {
   currentScore: WeeklyScore | null;
   highScore: number;
+  weekPoints: number;
+  weekTaskCount: number;
 }
 
-export function PointsWidget({ currentScore, highScore }: PointsWidgetProps) {
-  const points = currentScore?.totalPoints ?? 0;
-  const tasks = currentScore?.tasksCompleted ?? 0;
+export function PointsWidget({ currentScore, highScore, weekPoints, weekTaskCount }: PointsWidgetProps) {
+  const points = weekPoints;
+  const tasks = weekTaskCount;
   const isNewRecord = points > 0 && points >= highScore;
   const progress = highScore > 0 ? Math.min((points / highScore) * 100, 100) : 0;
 
