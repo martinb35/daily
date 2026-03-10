@@ -32,6 +32,14 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
   const [editDescription, setEditDescription] = useState(task.description);
   const { invoke } = useIpc();
 
+  // Keep edit fields in sync when task prop changes (avoid stale state)
+  useEffect(() => {
+    if (!editing) {
+      setEditTitle(task.title);
+      setEditDescription(task.description);
+    }
+  }, [task.id, task.title, task.description, editing]);
+
   useEffect(() => {
     if (teamMembers.length === 0) {
       invoke<TeamMember[]>('team:list').then(setTeamMembers);
@@ -93,17 +101,27 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
         </div>
       ) : (
         <>
-          <h4
-            className={`${styles.title} ${onUpdate && task.status !== 'done' ? styles.editable : ''}`}
-            onClick={() => { if (onUpdate && task.status !== 'done') setEditing(true); }}
-          >
-            {task.title}
-          </h4>
+          {onUpdate && task.status !== 'done' ? (
+            <h4
+              className={`${styles.title} ${styles.editable}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => setEditing(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true); } }}
+            >
+              {task.title}
+            </h4>
+          ) : (
+            <h4 className={styles.title}>{task.title}</h4>
+          )}
           {!compact && task.description && <p className={styles.description}>{task.description}</p>}
           {!compact && !task.description && onUpdate && task.status !== 'done' && (
             <p
               className={styles.addDescription}
+              role="button"
+              tabIndex={0}
               onClick={() => setEditing(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true); } }}
             >
               + Add details
             </p>

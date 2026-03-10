@@ -61,14 +61,17 @@ export function ReviewView() {
     id ? team.find((m) => m.id === id)?.name ?? 'Unknown' : null;
 
   const handleCreateReview = async () => {
-    const weekScore = scores.find((s) => s.weekOf === thisWeek);
+    const totalPointsFromTasks = doneTasks.reduce(
+      (sum, task) => sum + (task.points ?? 0),
+      0,
+    );
     const review: ReviewSnapshot = {
       id: generateId(),
       weekOf: thisWeek,
       completedTaskIds: doneTasks.map((t) => t.id),
       delegatedTaskIds: delegatedTasks.map((t) => t.id),
       deferredTaskIds: deferredTasks.map((t) => t.id),
-      totalPoints: weekScore?.totalPoints ?? 0,
+      totalPoints: totalPointsFromTasks,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
     };

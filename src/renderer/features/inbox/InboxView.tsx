@@ -19,7 +19,10 @@ function getMonday(date: Date): string {
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const dayOfMonth = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${dayOfMonth}`;
 }
 
 export function InboxView() {
@@ -109,28 +112,39 @@ export function InboxView() {
     updateTask(updated);
     playSound('complete');
 
-    // Update weekly score
+    // Update weekly score using functional state update to avoid stale closures
     const monday = getMonday(new Date());
-    const existing = scores.find((s) => s.weekOf === monday);
-    if (existing) {
-      const updatedScore: WeeklyScore = {
-        ...existing,
-        totalPoints: existing.totalPoints + pts,
-        tasksCompleted: existing.tasksCompleted + 1,
-        updatedAt: new Date().toISOString(),
-      };
-      await invoke('scores:update', updatedScore);
-      setScores(scores.map((s) => (s.id === existing.id ? updatedScore : s)));
-    } else {
-      const newScore: WeeklyScore = {
-        id: generateId(),
-        weekOf: monday,
-        totalPoints: pts,
-        tasksCompleted: 1,
-        updatedAt: new Date().toISOString(),
-      };
-      await invoke('scores:create', newScore);
-      setScores([...scores, newScore]);
+    let scoreToPersist: WeeklyScore | null = null;
+    let isUpdate = false;
+
+    setScores((prev) => {
+      const existing = prev.find((s) => s.weekOf === monday);
+      if (existing) {
+        const updatedScore: WeeklyScore = {
+          ...existing,
+          totalPoints: existing.totalPoints + pts,
+          tasksCompleted: existing.tasksCompleted + 1,
+          updatedAt: new Date().toISOString(),
+        };
+        scoreToPersist = updatedScore;
+        isUpdate = true;
+        return prev.map((s) => (s.id === existing.id ? updatedScore : s));
+      } else {
+        const newScore: WeeklyScore = {
+          id: generateId(),
+          weekOf: monday,
+          totalPoints: pts,
+          tasksCompleted: 1,
+          updatedAt: new Date().toISOString(),
+        };
+        scoreToPersist = newScore;
+        isUpdate = false;
+        return [...prev, newScore];
+      }
+    });
+
+    if (scoreToPersist) {
+      await invoke(isUpdate ? 'scores:update' : 'scores:create', scoreToPersist);
     }
   };
 
