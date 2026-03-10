@@ -99,6 +99,7 @@ server.registerTool('tasks_update', {
     assigneeId: z.string().nullable().optional().describe('New assignee ID'),
     dueDate: z.string().nullable().optional().describe('New due date'),
     deferUntil: z.string().nullable().optional().describe('New defer-until date'),
+    points: z.number().nullable().optional().describe('Productivity points (auto-calculated on completion)'),
   },
 }, async (args) => {
   const tasks = readJsonFile<Task>('tasks.json');
@@ -111,6 +112,7 @@ server.registerTool('tasks_update', {
   if (args.assigneeId !== undefined) task.assigneeId = args.assigneeId;
   if (args.dueDate !== undefined) task.dueDate = args.dueDate;
   if (args.deferUntil !== undefined) task.deferUntil = args.deferUntil;
+  if (args.points !== undefined) task.points = args.points;
   task.updatedAt = new Date().toISOString();
   tasks[index] = task;
   writeJsonFile('tasks.json', tasks);
