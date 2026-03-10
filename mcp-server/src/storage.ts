@@ -41,8 +41,21 @@ export function readJsonFile<T>(filename: string): T[] {
   if (!fs.existsSync(filePath)) {
     return [];
   }
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(raw) as T[];
+  const raw = fs.readFileSync(filePath, 'utf-8').trim();
+  if (raw === '') {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.error(`Expected array in ${filePath}, got ${typeof parsed}. Returning empty array.`);
+      return [];
+    }
+    return parsed as T[];
+  } catch (error) {
+    console.error(`Failed to parse ${filePath}:`, error);
+    return [];
+  }
 }
 
 export function writeJsonFile<T>(filename: string, data: T[]): void {

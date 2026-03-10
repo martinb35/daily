@@ -4,47 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile, getDataDir } from './storage.js';
-
-// --- Types (mirrored from shared/types.ts) ---
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'inbox' | 'delegated' | 'scheduled' | 'done';
-  assigneeId: string | null;
-  dueDate: string | null;
-  deferUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  areas: string[];
-  notes: string;
-}
-
-interface TimeBlock {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  taskIds: string[];
-  color: string;
-}
-
-interface ReviewSnapshot {
-  id: string;
-  weekOf: string;
-  completedTaskIds: string[];
-  delegatedTaskIds: string[];
-  deferredTaskIds: string[];
-  notes: string;
-  createdAt: string;
-}
+import type { Task, TeamMember, TimeBlock, ReviewSnapshot } from './types.js';
 
 // --- Server setup ---
 
@@ -95,7 +55,7 @@ server.registerTool('tasks_create', {
   title: 'Create Task',
   description: 'Create a new task in the inbox',
   inputSchema: {
-    id: z.string().describe('Unique task ID (kebab-case)'),
+    id: z.string().describe('Unique task ID string'),
     title: z.string().describe('Task title'),
     description: z.string().optional().default('').describe('Task description'),
     status: z.enum(['inbox', 'delegated', 'scheduled', 'done']).optional().default('inbox')
@@ -404,6 +364,46 @@ server.registerTool('reviews_create', {
   reviews.push(review);
   writeJsonFile('reviews.json', reviews);
   return jsonResult(review);
+});
+
+server.registerTool('reviews_update', {
+  title: 'Update Review',
+  description: 'Update a weekly review snapshot by ID',
+  inputSchema: {
+    id: z.string().describe('Review ID to update'),
+    weekOf: z.string().optional().describe('New week-of date'),
+    completedTaskIds: z.array(z.string()).optional(),
+    delegatedTaskIds: z.array(z.string()).optional(),
+    deferredTaskIds: z.array(z.string()).optional(),
+    notes: z.string().optional().describe('New notes'),
+  },
+}, async (args) => {
+  const reviews = readJsonFile<ReviewSnapshot>('reviews.json');
+  const index = reviews.findIndex(r => r.id === args.id);
+  if (index === -1) return jsonResult({ error: `Review not found: ${args.id}` });
+  const review = reviews[index];
+  if (args.weekOf !== undefined) review.weekOf = args.weekOf;
+  if (args.completedTaskIds !== undefined) review.completedTaskIds = args.completedTaskIds;
+  if (args.delegatedTaskIds !== undefined) review.delegatedTaskIds = args.delegatedTaskIds;
+  if (args.deferredTaskIds !== undefined) review.deferredTaskIds = args.deferredTaskIds;
+  if (args.notes !== undefined) review.notes = args.notes;
+  reviews[index] = review;
+  writeJsonFile('reviews.json', reviews);
+  return jsonResult(review);
+});
+
+server.registerTool('reviews_delete', {
+  title: 'Delete Review',
+  description: 'Delete a weekly review snapshot by ID',
+  inputSchema: {
+    id: z.string().describe('Review ID to delete'),
+  },
+}, async ({ id }) => {
+  const reviews = readJsonFile<ReviewSnapshot>('reviews.json');
+  const filtered = reviews.filter(r => r.id !== id);
+  if (filtered.length === reviews.length) return jsonResult({ error: `Review not found: ${id}` });
+  writeJsonFile('reviews.json', filtered);
+  return jsonResult({ deleted: id });
 });
 
 // =============================================================================
