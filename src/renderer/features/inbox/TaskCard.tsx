@@ -58,6 +58,9 @@ export function TaskCard({ task, onDo, onDelegate, onDefer, onDone, onDelete, on
           💤 Until {new Date(task.deferUntil).toLocaleDateString()}
         </p>
       )}
+      {task.status === 'done' && task.points != null && (
+        <span className={styles.pointsBadge}>+{task.points} pts</span>
+      )}
 
       {!compact && (
       <div className={styles.actions}>

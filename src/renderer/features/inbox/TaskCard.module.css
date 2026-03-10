@@ -69,6 +69,17 @@
   margin-bottom: 8px;
 }
 
+.pointsBadge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.12);
+  padding: 1px 8px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
 .actions {
   display: flex;
   gap: 6px;

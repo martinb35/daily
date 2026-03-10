@@ -53,7 +53,7 @@
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -76,6 +76,16 @@
   font-size: 0.8rem;
   color: var(--color-text-muted);
   margin-bottom: 8px;
+}
+
+.pointsCard .summaryNumber {
+  color: #f1c40f;
+}
+
+.highScoreNote {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
 }
 
 .taskList {

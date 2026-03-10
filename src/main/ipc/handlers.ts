@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 import { readJsonFile, writeJsonFile, getDataDir } from './storage';
-import type { Task, TeamMember, TimeBlock, ReviewSnapshot } from '@shared/types';
+import type { Task, TeamMember, TimeBlock, ReviewSnapshot, WeeklyScore } from '@shared/types';
 
 function crudHandlers<T extends { id: string }>(entity: string, filename: string) {
   ipcMain.handle(`${entity}:list`, () => {
@@ -41,6 +41,7 @@ export function registerIpcHandlers() {
   crudHandlers<TeamMember>('team', 'team.json');
   crudHandlers<TimeBlock>('timeblocks', 'timeblocks.json');
   crudHandlers<ReviewSnapshot>('reviews', 'reviews.json');
+  crudHandlers<WeeklyScore>('scores', 'scores.json');
 
   ipcMain.handle('app:getDataPath', () => getDataDir());
 }

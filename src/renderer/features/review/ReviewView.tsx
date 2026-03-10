@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useReviewStore } from './reviewStore';
 import { useIpc } from '../../hooks/useIpc';
-import type { ReviewSnapshot, Task, TeamMember } from '@shared/types';
+import type { ReviewSnapshot, Task, TeamMember, WeeklyScore } from '@shared/types';
 import styles from './ReviewView.module.css';
 
 function generateId(): string {
@@ -29,6 +29,7 @@ export function ReviewView() {
   const [notes, setNotes] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [scores, setScores] = useState<WeeklyScore[]>([]);
 
   const thisWeek = getMonday(new Date());
   const hasReviewThisWeek = reviews.some((r) => r.weekOf === thisWeek);
@@ -39,11 +40,13 @@ export function ReviewView() {
       invoke<ReviewSnapshot[]>('reviews:list'),
       invoke<Task[]>('tasks:list'),
       invoke<TeamMember[]>('team:list'),
+      invoke<WeeklyScore[]>('scores:list'),
     ])
-      .then(([reviewData, taskData, teamData]) => {
+      .then(([reviewData, taskData, teamData, scoreData]) => {
         setReviews(reviewData);
         setTasks(taskData);
         setTeam(teamData);
+        setScores(scoreData);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -58,12 +61,14 @@ export function ReviewView() {
     id ? team.find((m) => m.id === id)?.name ?? 'Unknown' : null;
 
   const handleCreateReview = async () => {
+    const weekScore = scores.find((s) => s.weekOf === thisWeek);
     const review: ReviewSnapshot = {
       id: generateId(),
       weekOf: thisWeek,
       completedTaskIds: doneTasks.map((t) => t.id),
       delegatedTaskIds: delegatedTasks.map((t) => t.id),
       deferredTaskIds: deferredTasks.map((t) => t.id),
+      totalPoints: weekScore?.totalPoints ?? 0,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -91,6 +96,15 @@ export function ReviewView() {
           <h3 className={styles.panelTitle}>Week of {formatWeek(thisWeek)}</h3>
 
           <div className={styles.summary}>
+            <div className={`${styles.summaryCard} ${styles.pointsCard}`}>
+              <div className={styles.summaryNumber}>
+                {scores.find((s) => s.weekOf === thisWeek)?.totalPoints ?? 0}
+              </div>
+              <div className={styles.summaryLabel}>⭐ Points</div>
+              <div className={styles.highScoreNote}>
+                Best: {scores.reduce((max, s) => Math.max(max, s.totalPoints), 0)} pts
+              </div>
+            </div>
             <div className={styles.summaryCard}>
               <div className={styles.summaryNumber}>{doneTasks.length}</div>
               <div className={styles.summaryLabel}>✅ Completed</div>
@@ -166,7 +180,7 @@ export function ReviewView() {
               >
                 <span className={styles.historyWeek}>Week of {formatWeek(r.weekOf)}</span>
                 <span className={styles.historyStats}>
-                  ✅ {r.completedTaskIds.length} · 📤 {r.delegatedTaskIds.length} · ⏳{' '}
+                  ⭐ {r.totalPoints ?? 0} pts · ✅ {r.completedTaskIds.length} · 📤 {r.delegatedTaskIds.length} · ⏳{' '}
                   {r.deferredTaskIds.length}
                 </span>
                 <span className={styles.expandIcon}>{expandedId === r.id ? '▾' : '▸'}</span>
