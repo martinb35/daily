@@ -4,65 +4,59 @@
 
 Daily runs as an Electron app on one PC with local JSON data files. The Start My Day and End My Day workflows require coordinating with GitHub Copilot CLI (for WorkIQ/M365 access and AI reasoning). To use Daily on another machine today, you'd need to remote into the primary PC.
 
-**Goal:** Install Daily on any machine, use it fully — including AI-powered workflows — without remoting in or registering apps with corporate infrastructure.
+**Goal:** Package Daily as a portable Electron app, store data in OneDrive for Business, and publish releases on GitHub so any Windows machine can run it.
 
 ---
 
-## Solution: Two-Part Architecture
+## Solution: Portable Electron App + OneDrive Data
 
-### Part 1: OneDrive for Business Data Sync
-
-Use OneDrive as the shared data layer. Each machine runs the app locally, reading/writing to the same OneDrive-synced folder.
+### Architecture
 
 ```
-MACHINE A:
-  [Electron App] → [OneDrive\Daily\*.json] ← [MCP Server]
-                         ↕ (OneDrive sync)
-MACHINE B:
-  [Electron App] → [OneDrive\Daily\*.json] ← [MCP Server]
+OneDrive for Business
+  └── Daily/
+        ├── tasks.json
+        ├── scores.json
+        ├── timeblocks.json
+        ├── team.json
+        └── reviews.json
+              ↕ (OneDrive auto-sync)
+
+MACHINE A:                              MACHINE B:
+  Daily.exe (from GitHub Release)         Daily.exe (from GitHub Release)
+    ├── reads/writes OneDrive folder       ├── reads/writes OneDrive folder
+    ├── embedded terminal (xterm.js)       ├── embedded terminal (xterm.js)
+    └── bundled MCP server                 └── bundled MCP server
 ```
 
-**Why OneDrive:**
-- Already installed on every corp machine
-- No ports, no firewall issues, no VPN
-- Auto-sync, offline support
-- Private (your OneDrive, Microsoft-managed encryption)
-- JSON files are < 100KB total — syncs in seconds
-- MCP server already supports `DAILY_DATA_DIR` env var
+### Why This Works
 
-**Code changes:** Add `DAILY_DATA_DIR` env var support to Electron's `storage.ts` (~5 lines). Everything else is config.
-
-**Risk:** Sync conflicts if two machines write the same file simultaneously. Mitigated by single-user usage (only active on one machine at a time).
-
-### Part 2: Embedded Terminal for CLI Workflows
-
-Embed a real terminal inside the Electron app so Start My Day / End My Day workflows run in-app without window switching or copy/paste.
-
-**Tech stack:**
-- **xterm.js** — Terminal emulator component (same one VS Code uses)
-- **node-pty** — Spawns Copilot CLI with a real pseudo-terminal from the Electron main process
-- Full interactivity — colors, prompts, user input, everything works
-
-**Workflow:**
-1. User clicks **"Start My Day"** in the app
-2. A terminal panel slides open inside the app
-3. App auto-launches Copilot CLI with the pre-built prompt
-4. User sees the CLI conversation inline — answers questions, confirms suggestions
-5. CLI writes to JSON files via daily-data MCP (as it does today)
-6. When done, the app detects file changes and reloads data
-7. Updated inbox/calendar/timeblocks appear immediately
-
-**Key properties:**
-- CLI is fully interactive — user can answer questions, clarify, iterate
-- No Graph API registration required — WorkIQ handles M365 access through CLI auth
-- No copy/paste between windows
-- Same MCP server, same tools, same prompts — just embedded
+- **Portable `.exe`** — No install needed, download from GitHub Release and run
+- **OneDrive syncs data** — Already on every corp machine, no ports/firewall/VPN
+- **GitHub Releases for distribution** — Private repo = private releases, version-tagged
+- **Embedded terminal** — Start/End My Day workflows run inside the app via Copilot CLI
+- **Bundled MCP server** — No separate install step, app ships with everything
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: OneDrive Data Sync
+### Phase 1: Packaging & GitHub Releases
+- [ ] Add `electron-builder` as a dev dependency
+- [ ] Configure `electron-builder` in `package.json`:
+  - Target: `portable` (single `.exe`, no installer) + `nsis` (optional installer)
+  - Output: `dist/` directory
+  - App icon, name, version metadata
+- [ ] Add `"dist"` script: `electron-builder --win portable`
+- [ ] Bundle the `mcp-server/` into the app resources (`extraResources`)
+- [ ] Test portable build locally — verify it runs without dev tooling
+- [ ] Create a GitHub Actions workflow (`.github/workflows/release.yml`):
+  - Trigger on version tags (`v*`)
+  - Run `npm ci && npm run build && npm run dist`
+  - Upload `.exe` to GitHub Release as asset
+- [ ] Tag `v1.0.0` and push to create first release
+
+### Phase 2: OneDrive Data Sync
 - [ ] Update `src/main/ipc/storage.ts` to check `DAILY_DATA_DIR` env var
 - [ ] Mirror the resolution logic from `mcp-server/src/storage.ts`
 - [ ] Create `Daily` folder in OneDrive for Business
@@ -70,7 +64,7 @@ Embed a real terminal inside the Electron app so Start My Day / End My Day workf
 - [ ] Set `DAILY_DATA_DIR` on primary machine, verify app + MCP both work
 - [ ] Test sync by modifying data on one machine and confirming on another
 
-### Phase 2: Embedded Terminal
+### Phase 3: Embedded Terminal
 - [ ] Install dependencies: `xterm`, `@xterm/addon-fit`, `node-pty`
 - [ ] Create IPC handlers for PTY management in main process
   - `pty:spawn` — create a new PTY with shell or command
@@ -85,31 +79,56 @@ Embed a real terminal inside the Electron app so Start My Day / End My Day workf
 - [ ] Add file watcher on data directory to auto-reload after CLI writes
 - [ ] Handle terminal lifecycle (cleanup on view change, persist across tabs)
 
-### Phase 3: First-Run Setup Wizard
-- [ ] Detect if Copilot CLI is installed (`gh copilot --version` or equivalent)
+### Phase 4: First-Run Setup Wizard
+- [ ] Detect if Copilot CLI is installed (`gh copilot --version`)
 - [ ] Check if MCP servers are registered in `~/.copilot/mcp-config.json`
 - [ ] If not, walk user through:
   - Install Copilot CLI link/instructions
-  - Auto-run MCP registration commands
-  - Set `DAILY_DATA_DIR` if not set
+  - Auto-register the bundled MCP server
+  - Prompt for `DAILY_DATA_DIR` (browse to OneDrive folder)
 - [ ] Show setup status on Settings/About page
-
-### Phase 4: Packaging & Distribution
-- [ ] Configure electron-builder or electron-forge for distributable builds
-- [ ] Create Windows installer (MSI or NSIS)
-- [ ] Bundle MCP server inside the app package
-- [ ] Add auto-update support (electron-updater, GitHub Releases)
-- [ ] Document new machine setup in README
 
 ---
 
 ## New Machine Setup (End State)
 
-1. **Install Daily** (Windows installer)
-2. **Install Copilot CLI** (if not already installed)
-3. **First-run wizard** registers MCP servers automatically
-4. **Set `DAILY_DATA_DIR`** to OneDrive folder (wizard can prompt for this)
+1. **Download `Daily.exe`** from GitHub Release (private repo)
+2. **Run it** — no install needed
+3. **First-run wizard** prompts for OneDrive data folder, registers MCP server
+4. **Install Copilot CLI** if not present (wizard links to instructions)
 5. **Done** — app works with synced data and embedded CLI workflows
+
+---
+
+## GitHub Release Details
+
+- **Repo:** Private (`martinb35/daily`) — releases only visible to you
+- **Release assets:** `Daily-{version}-portable.exe` (~80-120MB)
+- **Automation:** GitHub Actions builds on `v*` tags
+- **Auto-update:** `electron-updater` checks GitHub Releases for new versions, prompts to download
+
+### Release workflow
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm run build
+      - run: npx electron-builder --win portable
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+```
 
 ---
 
@@ -122,9 +141,10 @@ Embed a real terminal inside the Electron app so Start My Day / End My Day workf
 | `DAILY_DATA_DIR` env var (Electron) | Custom data path | ❌ ~5 lines |
 | xterm.js | Terminal emulator UI | ❌ Add dependency |
 | node-pty | PTY subprocess management | ❌ Add dependency |
+| electron-builder | Packaging & distribution | ❌ Add dev dependency |
+| electron-updater | Auto-update from GitHub Releases | ❌ Add dependency |
 | Copilot CLI | AI workflows | ✅ Yes (per machine) |
-| daily-data MCP server | Data tools for CLI | ✅ Yes |
-| electron-builder | Installer packaging | ❌ Add dependency |
+| daily-data MCP server | Data tools for CLI | ✅ Yes (bundled) |
 
 ---
 
@@ -132,17 +152,20 @@ Embed a real terminal inside the Electron app so Start My Day / End My Day workf
 
 - Inbox, Team, Calendar, Review views — unchanged
 - Zustand stores, CSS modules, all UI — unchanged
-- MCP server code — unchanged
+- MCP server code — unchanged (bundled as `extraResources`)
 - Data format (JSON files) — unchanged
 - Copilot CLI prompts — unchanged
 - WorkIQ, ADO MCP integrations — unchanged
 
 ## What Changes
 
+- App packaged as portable `.exe` via electron-builder
+- MCP server bundled inside the app package
+- Storage module gains `DAILY_DATA_DIR` env var override
 - Start/End My Day views gain an embedded terminal panel
 - Electron main process gains PTY management IPC handlers
-- Storage module gains env var override
-- App gets an installer and setup wizard
+- First-run wizard for setup on new machines
+- GitHub Actions workflow for automated releases
 
 ---
 
@@ -151,4 +174,6 @@ Embed a real terminal inside the Electron app so Start My Day / End My Day workf
 - **Conflict detection:** Watch for OneDrive "conflicted copy" files, surface warning in app
 - **File watcher debouncing:** OneDrive may trigger multiple write events during sync
 - **Terminal history:** Persist terminal sessions so user can review past workflow runs
-- **Graph API migration:** If you later register a corp app, can replace CLI workflows with direct API calls for a fully self-contained experience (no CLI dependency)
+- **Mac/Linux support:** electron-builder supports cross-platform builds if needed later
+- **Graph API migration:** If you later register a corp app, can replace CLI workflows with direct API calls (no CLI dependency)
+- **Code signing:** Sign the `.exe` to avoid Windows SmartScreen warnings
