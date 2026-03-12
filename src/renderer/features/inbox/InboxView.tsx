@@ -172,9 +172,9 @@ export function InboxView() {
 
   const now = new Date();
   const nowIso = now.toISOString();
-  const inboxTasks = tasks.filter(
-    (t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= nowIso),
-  );
+  const inboxTasks = tasks
+    .filter((t) => t.status === 'inbox' && (!t.deferUntil || t.deferUntil <= nowIso))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const snoozedTasks = tasks.filter(
     (t) => t.status === 'inbox' && t.deferUntil && t.deferUntil > nowIso,
   );
@@ -186,9 +186,9 @@ export function InboxView() {
   const dayOfWeek = weekStart.getDay();
   weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
   weekStart.setHours(0, 0, 0, 0);
-  const doneTasks = tasks.filter(
-    (t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart,
-  );
+  const doneTasks = tasks
+    .filter((t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   // Points tracking — derive from actual done tasks for accuracy
   const thisMonday = getMonday(now);
