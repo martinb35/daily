@@ -525,7 +525,7 @@ server.registerTool('calendar_sync', {
   },
 }, async ({ date, events }) => {
   const allBlocks = readJsonFile<TimeBlock>('timeblocks.json');
-  const existingForDate = allBlocks.filter((b) => b.start.includes(date));
+  const existingForDate = allBlocks.filter((b) => b.start.startsWith(date));
   const existingIds = new Set(allBlocks.map((b) => b.id));
 
   const colorMap: Record<string, string> = {
@@ -542,13 +542,10 @@ server.registerTool('calendar_sync', {
 
   for (const event of events) {
     const titleLower = event.title.toLowerCase();
-    const eventStartMs = new Date(event.start).getTime();
 
     const duplicate = existingForDate.find((b) => {
       const bLower = b.title.toLowerCase();
-      if (bLower.includes(titleLower) || titleLower.includes(bLower)) return true;
-      if (new Date(b.start).getTime() === eventStartMs) return true;
-      return false;
+      return bLower.includes(titleLower) || titleLower.includes(bLower);
     });
 
     if (duplicate) {
