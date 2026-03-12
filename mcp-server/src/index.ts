@@ -491,6 +491,115 @@ server.registerTool('scores_delete', {
 });
 
 // =============================================================================
+// CALENDAR SYNC
+// =============================================================================
+
+server.registerTool('calendar_sync', {
+  title: 'Sync Calendar to Time Blocks',
+  description:
+    'Sync calendar events to timeblocks for a given date. Deduplicates against existing timeblocks by title match or start-time match. ' +
+    'Color mapping by type: one_on_one=#2ECC71, team=#4A90D9, external=#E67E22, focus=#9B59B6, wellness=#1ABC9C, other=#95A5A6. ' +
+    'Returns summary of added and skipped events.',
+  inputSchema: {
+    date: z.string().describe('Date to sync (YYYY-MM-DD)'),
+    events: z
+      .array(
+        z.object({
+          title: z.string().describe('Event title'),
+          start: z
+            .string()
+            .describe('Start time (ISO 8601 with timezone, e.g. 2026-03-12T09:00:00-07:00)'),
+          end: z
+            .string()
+            .describe('End time (ISO 8601 with timezone, e.g. 2026-03-12T10:00:00-07:00)'),
+          type: z
+            .enum(['one_on_one', 'team', 'external', 'focus', 'wellness', 'other'])
+            .optional()
+            .default('other')
+            .describe(
+              'Event type for color coding. one_on_one=1:1 meetings, team=team/group meetings, external=meetings with external attendees, focus=focus/deep work, wellness=breaks/walks/personal, other=default',
+            ),
+        }),
+      )
+      .describe('Calendar events to sync as timeblocks'),
+  },
+}, async ({ date, events }) => {
+  const allBlocks = readJsonFile<TimeBlock>('timeblocks.json');
+  const existingForDate = allBlocks.filter((b) => b.start.includes(date));
+  const existingIds = new Set(allBlocks.map((b) => b.id));
+
+  const colorMap: Record<string, string> = {
+    one_on_one: '#2ECC71',
+    team: '#4A90D9',
+    external: '#E67E22',
+    focus: '#9B59B6',
+    wellness: '#1ABC9C',
+    other: '#95A5A6',
+  };
+
+  const added: TimeBlock[] = [];
+  const skipped: { title: string; reason: string }[] = [];
+
+  for (const event of events) {
+    const titleLower = event.title.toLowerCase();
+    const eventStartMs = new Date(event.start).getTime();
+
+    const duplicate = existingForDate.find((b) => {
+      const bLower = b.title.toLowerCase();
+      if (bLower.includes(titleLower) || titleLower.includes(bLower)) return true;
+      if (new Date(b.start).getTime() === eventStartMs) return true;
+      return false;
+    });
+
+    if (duplicate) {
+      skipped.push({ title: event.title, reason: `matches existing: "${duplicate.title}"` });
+      continue;
+    }
+
+    // Generate a unique kebab-case ID
+    let baseId =
+      'mtg-' +
+      event.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .slice(0, 30) +
+      '-' +
+      date;
+    let id = baseId;
+    let suffix = 2;
+    while (existingIds.has(id)) {
+      id = `${baseId}-${suffix++}`;
+    }
+
+    const block: TimeBlock = {
+      id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      taskIds: [],
+      color: colorMap[event.type ?? 'other'],
+    };
+
+    allBlocks.push(block);
+    existingIds.add(id);
+    added.push(block);
+  }
+
+  if (added.length > 0) {
+    writeJsonFile('timeblocks.json', allBlocks);
+  }
+
+  return jsonResult({
+    date,
+    summary: `${added.length} added, ${skipped.length} skipped (${existingForDate.length} pre-existing)`,
+    added,
+    skipped,
+  });
+});
+
+// =============================================================================
 // UTILITY
 // =============================================================================
 
