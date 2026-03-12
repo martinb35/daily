@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile, getDataDir } from './storage.js';
-import type { Task, TeamMember, TimeBlock, ReviewSnapshot, WeeklyScore } from './types.js';
+import type { Task, TeamMember, TimeBlock, ReviewSnapshot, WeeklyScore, Workstream, ProgressUpdate } from './types.js';
 
 // --- Server setup ---
 
@@ -606,6 +606,188 @@ server.registerTool('data_path', {
   inputSchema: {},
 }, async () => {
   return jsonResult({ dataDir: getDataDir() });
+});
+
+// =============================================================================
+// WORKSTREAMS (Status Deck)
+// =============================================================================
+
+// Parse YYMM target date and check if it's in the past
+function isOverdue(targetCompletionDate: string): boolean {
+  if (!targetCompletionDate || targetCompletionDate.length !== 4) return false;
+  const yy = parseInt(targetCompletionDate.slice(0, 2), 10);
+  const mm = parseInt(targetCompletionDate.slice(2, 4), 10);
+  if (isNaN(yy) || isNaN(mm)) return false;
+  const targetYear = 2000 + yy;
+  // Overdue if we're past the end of the target month
+  const deadline = new Date(targetYear, mm, 1); // 1st of next month
+  return new Date() >= deadline;
+}
+
+server.registerTool('workstreams_list', {
+  title: 'List Workstreams',
+  description: 'List all workstreams, optionally filtered by status',
+  inputSchema: {
+    status: z.enum(['On Track', 'OFF TRACK', 'At risk']).optional()
+      .describe('Filter by workstream status'),
+  },
+}, async ({ status }) => {
+  let workstreams = readJsonFile<Workstream>('workstreams.json');
+  if (status) {
+    workstreams = workstreams.filter(w => w.status === status);
+  }
+  workstreams.sort((a, b) => a.page !== b.page ? a.page - b.page : a.sortOrder - b.sortOrder);
+  const result = workstreams.map(w => ({
+    ...w,
+    overdue: isOverdue(w.targetCompletionDate),
+  }));
+  return jsonResult(result);
+});
+
+server.registerTool('workstreams_get', {
+  title: 'Get Workstream',
+  description: 'Get a single workstream by ID',
+  inputSchema: {
+    id: z.string().describe('Workstream ID'),
+  },
+}, async ({ id }) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const ws = workstreams.find(w => w.id === id);
+  if (!ws) return jsonResult({ error: `Workstream not found: ${id}` });
+  return jsonResult(ws);
+});
+
+server.registerTool('workstreams_create', {
+  title: 'Create Workstream',
+  description: 'Create a new workstream for the status deck',
+  inputSchema: {
+    id: z.string().describe('Unique workstream ID (kebab-case)'),
+    title: z.string().describe('Workstream title'),
+    priority: z.number().optional().default(0).describe('Priority (0 or 1)'),
+    productInitiative: z.string().optional().default('').describe('Product initiative (e.g. Singularity, Windows, All)'),
+    impact: z.string().optional().default('').describe('Impact description'),
+    devMonthsTotal: z.number().optional().default(0).describe('Total dev months'),
+    devMonthsRemain: z.number().optional().default(0).describe('Remaining dev months'),
+    release: z.string().optional().default('').describe('Release name'),
+    status: z.enum(['On Track', 'OFF TRACK', 'At risk']).optional().default('On Track')
+      .describe('Workstream status'),
+    targetCompletionDate: z.string().optional().default('').describe('Target completion (YYMM format)'),
+    owners: z.array(z.string()).optional().default([]).describe('Team member IDs who own this workstream'),
+    adoWorkItemId: z.number().nullable().optional().default(null).describe('ADO parent Scenario/Deliverable work item ID'),
+    adoProject: z.string().optional().default('').describe('ADO project name (e.g. "OS")'),
+    page: z.number().optional().default(1).describe('Deck page number'),
+    sortOrder: z.number().optional().default(0).describe('Sort order within page'),
+  },
+}, async (args) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const now = new Date().toISOString();
+  const ws: Workstream = {
+    id: args.id,
+    title: args.title,
+    priority: args.priority ?? 0,
+    productInitiative: args.productInitiative ?? '',
+    impact: args.impact ?? '',
+    devMonthsTotal: args.devMonthsTotal ?? 0,
+    devMonthsRemain: args.devMonthsRemain ?? 0,
+    release: args.release ?? '',
+    status: args.status ?? 'On Track',
+    targetCompletionDate: args.targetCompletionDate ?? '',
+    owners: args.owners ?? [],
+    adoWorkItemId: args.adoWorkItemId ?? null,
+    adoProject: args.adoProject ?? '',
+    progressUpdates: [],
+    page: args.page ?? 1,
+    sortOrder: args.sortOrder ?? 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  workstreams.push(ws);
+  writeJsonFile('workstreams.json', workstreams);
+  return jsonResult(ws);
+});
+
+server.registerTool('workstreams_update', {
+  title: 'Update Workstream',
+  description: 'Update an existing workstream by ID. Only provided fields are changed.',
+  inputSchema: {
+    id: z.string().describe('Workstream ID to update'),
+    title: z.string().optional().describe('New title'),
+    priority: z.number().optional().describe('New priority'),
+    productInitiative: z.string().optional().describe('New product initiative'),
+    impact: z.string().optional().describe('New impact'),
+    devMonthsTotal: z.number().optional().describe('New total dev months'),
+    devMonthsRemain: z.number().optional().describe('New remaining dev months'),
+    release: z.string().optional().describe('New release'),
+    status: z.enum(['On Track', 'OFF TRACK', 'At risk']).optional().describe('New status'),
+    targetCompletionDate: z.string().optional().describe('New target completion date'),
+    owners: z.array(z.string()).optional().describe('New owner IDs'),
+    adoWorkItemId: z.number().nullable().optional().describe('ADO parent Scenario/Deliverable work item ID'),
+    adoProject: z.string().optional().describe('ADO project name (e.g. "OS")'),
+    page: z.number().optional().describe('New page number'),
+    sortOrder: z.number().optional().describe('New sort order'),
+  },
+}, async (args) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const index = workstreams.findIndex(w => w.id === args.id);
+  if (index === -1) return jsonResult({ error: `Workstream not found: ${args.id}` });
+  const ws = workstreams[index];
+  if (args.title !== undefined) ws.title = args.title;
+  if (args.priority !== undefined) ws.priority = args.priority;
+  if (args.productInitiative !== undefined) ws.productInitiative = args.productInitiative;
+  if (args.impact !== undefined) ws.impact = args.impact;
+  if (args.devMonthsTotal !== undefined) ws.devMonthsTotal = args.devMonthsTotal;
+  if (args.devMonthsRemain !== undefined) ws.devMonthsRemain = args.devMonthsRemain;
+  if (args.release !== undefined) ws.release = args.release;
+  if (args.status !== undefined) ws.status = args.status;
+  if (args.targetCompletionDate !== undefined) ws.targetCompletionDate = args.targetCompletionDate;
+  if (args.owners !== undefined) ws.owners = args.owners;
+  if (args.adoWorkItemId !== undefined) ws.adoWorkItemId = args.adoWorkItemId;
+  if (args.adoProject !== undefined) ws.adoProject = args.adoProject;
+  if (args.page !== undefined) ws.page = args.page;
+  if (args.sortOrder !== undefined) ws.sortOrder = args.sortOrder;
+  ws.updatedAt = new Date().toISOString();
+  workstreams[index] = ws;
+  writeJsonFile('workstreams.json', workstreams);
+  return jsonResult(ws);
+});
+
+server.registerTool('workstreams_delete', {
+  title: 'Delete Workstream',
+  description: 'Delete a workstream by ID',
+  inputSchema: {
+    id: z.string().describe('Workstream ID to delete'),
+  },
+}, async ({ id }) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const filtered = workstreams.filter(w => w.id !== id);
+  if (filtered.length === workstreams.length) return jsonResult({ error: `Workstream not found: ${id}` });
+  writeJsonFile('workstreams.json', filtered);
+  return jsonResult({ deleted: id });
+});
+
+server.registerTool('workstreams_add_update', {
+  title: 'Add Workstream Update',
+  description: 'Append a progress update entry to a workstream',
+  inputSchema: {
+    id: z.string().describe('Workstream ID'),
+    date: z.string().describe('Update date (ISO 8601 date, e.g. 2026-03-12)'),
+    text: z.string().describe('Progress update text (use tags like [finished], [ongoing], [Blocked])'),
+    source: z.enum(['manual', 'workiq']).optional().default('manual')
+      .describe('Source of the update'),
+  },
+}, async (args) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const index = workstreams.findIndex(w => w.id === args.id);
+  if (index === -1) return jsonResult({ error: `Workstream not found: ${args.id}` });
+  const update: ProgressUpdate = {
+    date: args.date,
+    text: args.text,
+    source: args.source ?? 'manual',
+  };
+  workstreams[index].progressUpdates.push(update);
+  workstreams[index].updatedAt = new Date().toISOString();
+  writeJsonFile('workstreams.json', workstreams);
+  return jsonResult(workstreams[index]);
 });
 
 // --- Start server ---
