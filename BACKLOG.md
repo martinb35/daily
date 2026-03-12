@@ -12,14 +12,14 @@ Expose the app's JSON data (tasks, timeblocks, team, reviews) as native MCP tool
 - Same for `team` and `reviews`
 - Small Node.js server wrapping existing JSON storage in `src/main/storage.ts`
 
-### 2. Calendar Sync Tool
-**Priority:** High
+### ~~2. Calendar Sync Tool~~ ✅
+**Status:** Done — `calendar_sync` MCP tool in `mcp-server/src/index.ts`
 
 Takes WorkIQ calendar output and creates timeblocks automatically. Turns Start My Day from a multi-step conversation into a single call.
 
-- Input: date to sync
-- Queries WorkIQ for meetings, maps to timeblocks with correct colors
-- Deduplicates against existing timeblocks
+- Input: date + events array with title, start, end, type
+- Color-codes by type: one_on_one, team, external, focus, wellness
+- Deduplicates against existing timeblocks by title match or start-time match
 
 ### 3. End of Day Tool
 **Priority:** Medium
