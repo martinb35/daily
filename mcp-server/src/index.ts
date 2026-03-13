@@ -790,6 +790,90 @@ server.registerTool('workstreams_add_update', {
   return jsonResult(workstreams[index]);
 });
 
+// DECK GENERATOR
+// =============================================================================
+
+server.registerTool('workstreams_generate_deck', {
+  title: 'Generate Status Deck',
+  description: 'Generate formatted status deck text from workstream data, ready to paste into PowerPoint. Includes overdue/stale flags and owner names.',
+  inputSchema: {
+    weekOf: z.string().optional()
+      .describe('Week-of date for header (YYYY-MM-DD). Defaults to Monday of current week.'),
+    staleDays: z.number().optional().default(14)
+      .describe('Number of days without updates before flagging as stale. Default 14.'),
+  },
+}, async ({ weekOf, staleDays }) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const team = readJsonFile<TeamMember>('team.json');
+  const teamMap = new Map(team.map(m => [m.id, m.name]));
+  const staleThreshold = (staleDays ?? 14) * 24 * 60 * 60 * 1000;
+  const now = new Date();
+
+  // Calculate weekOf (Monday of current week) if not provided
+  if (!weekOf) {
+    const d = new Date(now);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    weekOf = d.toISOString().slice(0, 10);
+  }
+
+  workstreams.sort((a, b) => a.page !== b.page ? a.page - b.page : a.sortOrder - b.sortOrder);
+
+  const lines: string[] = [];
+  lines.push(`## Status Deck Updates — Week of ${weekOf}`);
+  lines.push('');
+
+  let currentPage = -1;
+
+  for (const ws of workstreams) {
+    if (ws.page !== currentPage) {
+      if (currentPage !== -1) lines.push('---', '');
+      currentPage = ws.page;
+    }
+
+    const latestUpdate = ws.progressUpdates.length > 0
+      ? ws.progressUpdates[ws.progressUpdates.length - 1]
+      : null;
+
+    const overdue = isOverdue(ws.targetCompletionDate);
+    const isStale = latestUpdate
+      ? (now.getTime() - new Date(latestUpdate.date).getTime()) > staleThreshold
+      : true; // no updates at all = stale
+
+    // Build header line
+    let header = `### ${ws.title} (${ws.status})`;
+    if (overdue) header += ' 🔴 OVERDUE';
+    if (ws.status === 'OFF TRACK') header += ' 🔴';
+    else if (ws.status === 'At risk') header += ' ⚠️';
+
+    lines.push(header);
+
+    // Owner names
+    const ownerNames = ws.owners.map(id => teamMap.get(id) || id).join(', ');
+    lines.push(`**Owners:** ${ownerNames} | **Target:** ${ws.targetCompletionDate || 'TBD'} | **Dev Months Left:** ${ws.devMonthsRemain}`);
+
+    if (isStale && !latestUpdate) {
+      lines.push('');
+      lines.push(`> ⚠️ **STALE** — No progress updates recorded. Consider checking in with owners.`);
+    } else if (isStale && latestUpdate) {
+      lines.push('');
+      lines.push(`> ⚠️ **STALE** — Last update: ${latestUpdate.date} (${Math.floor((now.getTime() - new Date(latestUpdate.date).getTime()) / (24 * 60 * 60 * 1000))} days ago)`);
+    }
+
+    // Progress update text
+    if (latestUpdate) {
+      lines.push('');
+      lines.push(latestUpdate.text);
+    }
+
+    lines.push('');
+  }
+
+  const formatted = lines.join('\n');
+  return jsonResult({ formatted, weekOf, workstreamCount: workstreams.length });
+});
+
 // --- Start server ---
 
 async function main() {
