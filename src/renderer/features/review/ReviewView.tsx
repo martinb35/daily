@@ -51,7 +51,14 @@ export function ReviewView() {
       .finally(() => setLoading(false));
   }, []);
 
-  const doneTasks = tasks.filter((t) => t.status === 'done');
+  // Filter done tasks to current week only (Mon–Sun)
+  const weekStart = new Date();
+  const dayOfWeek = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  weekStart.setHours(0, 0, 0, 0);
+  const doneTasks = tasks.filter(
+    (t) => t.status === 'done' && new Date(t.updatedAt) >= weekStart,
+  );
   const delegatedTasks = tasks.filter((t) => t.status === 'delegated');
   const deferredTasks = tasks.filter((t) => t.deferUntil !== null && t.status === 'inbox');
   const inboxTasks = tasks.filter((t) => t.status === 'inbox' && !t.deferUntil);
