@@ -13,10 +13,51 @@ const server = new McpServer({
   version: '1.0.0',
 });
 
-// --- Helper ---
+// --- Helpers ---
 
 function jsonResult(data: unknown): { content: { type: 'text'; text: string }[] } {
   return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+}
+
+function calculatePoints(task: Task): number {
+  let points = 10;
+  if (task.dueDate) points += 5;
+  if (task.assigneeId) points += 5;
+  if (task.deferUntil) points += 3;
+  if (task.description.length > 100) points += 2;
+  const ageMs = Date.now() - new Date(task.createdAt).getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  if (ageDays < 1) points += 3;
+  else if (ageDays > 3) points += 5;
+  return points;
+}
+
+function getMonday(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function updateWeeklyScore(points: number): void {
+  const scores = readJsonFile<WeeklyScore>('scores.json');
+  const weekOf = getMonday(new Date());
+  const existing = scores.find(s => s.weekOf === weekOf);
+  if (existing) {
+    existing.totalPoints += points;
+    existing.tasksCompleted += 1;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    scores.push({
+      id: `score-${weekOf}`,
+      weekOf,
+      totalPoints: points,
+      tasksCompleted: 1,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  writeJsonFile('scores.json', scores);
 }
 
 // =============================================================================
@@ -106,6 +147,7 @@ server.registerTool('tasks_update', {
   const index = tasks.findIndex(t => t.id === args.id);
   if (index === -1) return jsonResult({ error: `Task not found: ${args.id}` });
   const task = tasks[index];
+  const wasDone = task.status === 'done';
   if (args.title !== undefined) task.title = args.title;
   if (args.description !== undefined) task.description = args.description;
   if (args.status !== undefined) task.status = args.status;
@@ -113,6 +155,14 @@ server.registerTool('tasks_update', {
   if (args.dueDate !== undefined) task.dueDate = args.dueDate;
   if (args.deferUntil !== undefined) task.deferUntil = args.deferUntil;
   if (args.points !== undefined) task.points = args.points;
+
+  // Auto-calculate points and update weekly score when newly completing a task
+  if (!wasDone && task.status === 'done') {
+    const pts = args.points ?? calculatePoints(task);
+    task.points = pts;
+    updateWeeklyScore(pts);
+  }
+
   task.updatedAt = new Date().toISOString();
   tasks[index] = task;
   writeJsonFile('tasks.json', tasks);
