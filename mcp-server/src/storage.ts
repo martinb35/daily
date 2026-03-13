@@ -63,3 +63,10 @@ export function writeJsonFile<T>(filename: string, data: T[]): void {
   const filePath = path.join(dataDir, filename);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
+
+export function writeTextFile(filename: string, content: string): string {
+  ensureDataDir();
+  const filePath = path.join(dataDir, filename);
+  fs.writeFileSync(filePath, content, 'utf-8');
+  return filePath;
+}

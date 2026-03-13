@@ -3,7 +3,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { readJsonFile, writeJsonFile, getDataDir } from './storage.js';
+import { readJsonFile, writeJsonFile, writeTextFile, getDataDir } from './storage.js';
 import type { Task, TeamMember, TimeBlock, ReviewSnapshot, WeeklyScore, Workstream, ProgressUpdate } from './types.js';
 
 // --- Server setup ---
@@ -871,7 +871,8 @@ server.registerTool('workstreams_generate_deck', {
   }
 
   const formatted = lines.join('\n');
-  return jsonResult({ formatted, weekOf, workstreamCount: workstreams.length });
+  const outputPath = writeTextFile('status-deck.md', formatted);
+  return jsonResult({ formatted, weekOf, workstreamCount: workstreams.length, outputPath });
 });
 
 // --- Start server ---
