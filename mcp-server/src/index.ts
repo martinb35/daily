@@ -875,6 +875,158 @@ server.registerTool('workstreams_generate_deck', {
   return jsonResult({ formatted, weekOf, workstreamCount: workstreams.length, outputPath });
 });
 
+// DECK AUDIT
+// =============================================================================
+
+server.registerTool('workstreams_audit_updates', {
+  title: 'Audit Workstream Updates',
+  description: 'Audit progress updates for cross-contamination between workstreams that share owners. Detects when update text for one workstream contains keywords specific to a sibling workstream. Returns flagged issues with context.',
+  inputSchema: {
+    verbose: z.boolean().optional().default(false)
+      .describe('If true, include the full update text in each finding for easier review.'),
+  },
+}, async ({ verbose }) => {
+  const workstreams = readJsonFile<Workstream>('workstreams.json');
+  const team = readJsonFile<TeamMember>('team.json');
+  const teamMap = new Map(team.map(m => [m.id, m.name]));
+
+  // Build keyword map: for each workstream, extract distinguishing keywords from its title
+  // that can identify content belonging to it
+  const wsKeywords = new Map<string, string[]>();
+  for (const ws of workstreams) {
+    const stopWords = new Set([
+      'auto', 'sr', 'autosr', 'for', 'on', 'the', 'and', 'in', 'of', 'a',
+      'mode', 'improvements', 'integration', 'tool',
+    ]);
+    const titleWords = ws.title
+      .replace(/[()\/]/g, ' ')
+      .split(/[\s+\-_]+/)
+      .map(w => w.toLowerCase().trim())
+      .filter(w => w.length > 2 && !stopWords.has(w));
+    wsKeywords.set(ws.id, titleWords);
+  }
+
+  // Find groups of workstreams that share at least one owner
+  const ownerToWorkstreams = new Map<string, string[]>();
+  for (const ws of workstreams) {
+    for (const ownerId of ws.owners) {
+      const list = ownerToWorkstreams.get(ownerId) || [];
+      list.push(ws.id);
+      ownerToWorkstreams.set(ownerId, list);
+    }
+  }
+
+  // Identify sibling pairs (workstreams sharing owners)
+  const siblingPairs = new Set<string>();
+  for (const [_ownerId, wsIds] of ownerToWorkstreams) {
+    if (wsIds.length < 2) continue;
+    for (let i = 0; i < wsIds.length; i++) {
+      for (let j = i + 1; j < wsIds.length; j++) {
+        const key = [wsIds[i], wsIds[j]].sort().join('|');
+        siblingPairs.add(key);
+      }
+    }
+  }
+
+  interface AuditFinding {
+    workstreamId: string;
+    workstreamTitle: string;
+    siblingId: string;
+    siblingTitle: string;
+    sharedOwners: string[];
+    matchedKeywords: string[];
+    updateDate: string;
+    updateText?: string;
+  }
+
+  const findings: AuditFinding[] = [];
+
+  // For each sibling pair, check if workstream A's latest update contains keywords from B and vice versa
+  for (const pair of siblingPairs) {
+    const [idA, idB] = pair.split('|');
+    const wsA = workstreams.find(w => w.id === idA)!;
+    const wsB = workstreams.find(w => w.id === idB)!;
+    const sharedOwners = wsA.owners
+      .filter(o => wsB.owners.includes(o))
+      .map(id => teamMap.get(id) || id);
+
+    const keywordsA = wsKeywords.get(idA) || [];
+    const keywordsB = wsKeywords.get(idB) || [];
+
+    // Check A's latest update for B's keywords
+    if (wsA.progressUpdates.length > 0) {
+      const latestA = wsA.progressUpdates[wsA.progressUpdates.length - 1];
+      const textLower = latestA.text.toLowerCase();
+      const matched = keywordsB.filter(kw => {
+        // Only flag if the keyword appears in A's update but NOT in A's own keywords
+        return textLower.includes(kw) && !keywordsA.includes(kw);
+      });
+      if (matched.length > 0) {
+        findings.push({
+          workstreamId: idA,
+          workstreamTitle: wsA.title,
+          siblingId: idB,
+          siblingTitle: wsB.title,
+          sharedOwners,
+          matchedKeywords: [...new Set(matched)],
+          updateDate: latestA.date,
+          ...(verbose ? { updateText: latestA.text } : {}),
+        });
+      }
+    }
+
+    // Check B's latest update for A's keywords
+    if (wsB.progressUpdates.length > 0) {
+      const latestB = wsB.progressUpdates[wsB.progressUpdates.length - 1];
+      const textLower = latestB.text.toLowerCase();
+      const matched = keywordsA.filter(kw => {
+        return textLower.includes(kw) && !keywordsB.includes(kw);
+      });
+      if (matched.length > 0) {
+        findings.push({
+          workstreamId: idB,
+          workstreamTitle: wsB.title,
+          siblingId: idA,
+          siblingTitle: wsA.title,
+          sharedOwners,
+          matchedKeywords: [...new Set(matched)],
+          updateDate: latestB.date,
+          ...(verbose ? { updateText: latestB.text } : {}),
+        });
+      }
+    }
+  }
+
+  // Build sibling group summary
+  const siblingGroups: { workstreams: string[]; sharedOwners: string[] }[] = [];
+  const visited = new Set<string>();
+  for (const pair of siblingPairs) {
+    const [idA, idB] = pair.split('|');
+    const key = [idA, idB].sort().join(',');
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const wsA = workstreams.find(w => w.id === idA)!;
+    const wsB = workstreams.find(w => w.id === idB)!;
+    const shared = wsA.owners
+      .filter(o => wsB.owners.includes(o))
+      .map(id => teamMap.get(id) || id);
+    siblingGroups.push({
+      workstreams: [wsA.title, wsB.title],
+      sharedOwners: shared,
+    });
+  }
+
+  return jsonResult({
+    findingsCount: findings.length,
+    findings,
+    siblingGroupsCount: siblingGroups.length,
+    siblingGroups,
+    summary: findings.length === 0
+      ? 'No cross-contamination detected. All workstream updates appear to contain content specific to their own scope.'
+      : `Found ${findings.length} potential cross-contamination issue(s). Review the findings and consider rewriting affected updates with workstream-specific content.`,
+  });
+});
+
 // --- Start server ---
 
 async function main() {
