@@ -861,10 +861,13 @@ server.registerTool('workstreams_generate_deck', {
       lines.push(`> ⚠️ **STALE** — Last update: ${latestUpdate.date} (${Math.floor((now.getTime() - new Date(latestUpdate.date).getTime()) / (24 * 60 * 60 * 1000))} days ago)`);
     }
 
-    // Progress update text
+    // Progress update text — convert each line to a markdown bullet
     if (latestUpdate) {
       lines.push('');
-      lines.push(latestUpdate.text);
+      const updateLines = latestUpdate.text.split('\n').filter(l => l.trim());
+      for (const line of updateLines) {
+        lines.push(`- ${line.trim()}`);
+      }
     }
 
     lines.push('');
